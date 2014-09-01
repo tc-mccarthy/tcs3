@@ -12,13 +12,13 @@ use Aws\S3\Model\MultipartUpload\UploadBuilder;
 //find all files related to this upload
 $keys[] = $file_data["file"];
 foreach($file_data["sizes"] as $size => $data){
-	$keys[] = substr($uploads["subdir"], 1) . "/" . $data["file"];
+	$keys[] = substr($this->uploads["subdir"], 1) . "/" . $data["file"];
 }
 
 //loop through all of the files and upload them
 foreach($keys as $key){
-	$localFile = $uploads["basedir"] . "/" . $key;
-	$remoteFile = $bucketDir . "/" . $uploadDir . "/" .$key;
+	$localFile = $this->uploads["basedir"] . "/" . $key;
+	$remoteFile = $this->options["bucket_path"] . "/" . $this->uploadDir . "/" .$key;
 
 	//if the file doesn't exist, skip it
 	if(!file_exists($localFile))
@@ -26,13 +26,13 @@ foreach($keys as $key){
 
 	//build a multistream upload for the file
 	$uploader = UploadBuilder::newInstance()
-		->setClient($s3Client)
+		->setClient($this->s3Client)
 		->setSource($localFile)
-		->setBucket($bucket)
+		->setBucket($this->options["bucket"])
 		->setKey($remoteFile)
 		->setOption('ACL', 'public-read')
-		->setConcurrency($concurrentConn)
-		->setMinPartSize($minPartSize * 1024 * 1024)
+		->setConcurrency($this->options["concurrent_conn"])
+		->setMinPartSize($this->options["min_part_size"] * 1024 * 1024)
 		->build();
 
 	try {
@@ -44,7 +44,7 @@ foreach($keys as $key){
 	}
 
 	//on a successful upload where the settings call for the local file to be deleted right away, delete the local file
-	if($upload && $deleteAfterPush){
+	if($upload && $this->options["s3_delete_local"] == 1){
 		unlink($localFile);
 	}
 }
