@@ -93,8 +93,6 @@ class tcS3 {
     public function delete_from_S3($post_id) {
         $file_data = wp_get_attachment_metadata($post_id);
 
-        $this->dump_to_log($file_data);
-
         if (is_array($file_data)){
 	        preg_match("/([0-9]+\/[0-9]+)\/(.+)$/", $file_data["file"], $matches);
             $datePath = $matches[1];
