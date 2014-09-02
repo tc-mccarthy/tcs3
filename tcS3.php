@@ -93,11 +93,15 @@ class tcS3 {
     public function delete_from_S3($post_id) {
         $file_data = wp_get_attachment_metadata($post_id);
 
+        $this->dump_to_log($file_data);
+
         if (is_array($file_data)){
-	        $keys[] = $file_data["file"];
-	        foreach ($file_data["sizes"] as $size => $data) {
-	            $keys[] = substr($this->uploads["subdir"], 1) . "/" . $data["file"];
-	        }
+	        preg_match("/([0-9]+\/[0-9]+)\/(.+)$/", $file_data["file"], $matches);
+            $datePath = $matches[1];
+            $keys[] = $file_data["file"];
+            foreach($file_data["sizes"] as $size => $data){
+                $keys[] = $datePath . "/" . $data["file"];
+            }
 
 	        foreach ($keys as $key) {
 	        	$file = $this->options["bucket_path"] . "/" . $this->uploadDir . "/" . $key;

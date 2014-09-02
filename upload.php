@@ -10,9 +10,12 @@ use Aws\Common\Exception\MultipartUploadException;
 use Aws\S3\Model\MultipartUpload\UploadBuilder;
 
 //find all files related to this upload
+
+preg_match("/([0-9]+\/[0-9]+)\/(.+)$/", $file_data["file"], $matches);
+$datePath = $matches[1];
 $keys[] = $file_data["file"];
 foreach($file_data["sizes"] as $size => $data){
-	$keys[] = substr($this->uploads["subdir"], 1) . "/" . $data["file"];
+	$keys[] = $datePath . "/" . $data["file"];
 }
 
 //loop through all of the files and upload them
