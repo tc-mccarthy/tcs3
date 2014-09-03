@@ -40,6 +40,7 @@ class tcS3 {
         //setup admin menu
         add_action('admin_menu', array($this, 'add_plugin_page'));
         add_action('admin_init', array($this, 'page_init'));
+        add_action('admin_init', array($this, 'enqueue_admin_scripts'));
 
         //add new column to media library
         add_filter('manage_media_columns', array($this, 'create_s3_media_column'));
@@ -100,7 +101,7 @@ class tcS3 {
         // Do nothing
     }
 
-    /*   * ****utility functions******* */
+    /******utility functions********/
 
     //upload a series of keys to S3
     public function push_to_s3($keys) {
@@ -231,29 +232,66 @@ class tcS3 {
             case 's3':
                 $is_on_s3 = get_post_meta($post_ID, 'is_on_s3', true);
                 if($is_on_s3 == 1){
-                    echo "<img src='" . plugin_dir_url(__FILE__) . "img/s3-logo.png' />";
+                    $uploadedClasses = 'uploaded active';
+                    $notUploadedClasses = 'notuploaded';
                 } else{
-                    echo "<img src='" . plugin_dir_url(__FILE__) . "img/s3-logo-bw.png' style='opacity: .5;'/>";
+                    $uploadedClasses = 'uploaded';
+                    $notUploadedClasses = 'notuploaded active';
                 }
+
+                echo "<img class='{$uploadedClasses}' src='" . plugin_dir_url(__FILE__) . "img/s3-logo.png' />";
+                echo "<img class='{$notUploadedClasses}' src='" . plugin_dir_url(__FILE__) . "img/s3-logo-bw.png' />";
+                
                 break;
         }
     }
 
-    function push_single_to_S3( $actions, $post ) {
+    public function push_single_to_S3( $actions, $post ) {
        
-        $url = plugin_dir_url() . "tcS3/tcS3-ajax.php?postID={$post->ID}";
-        $actions['regenerate_thumbnails'] = '<a href="' . esc_url( $url ) . '" title="' . esc_attr("Send this file to S3") . '">' . "Send this file to S3" . '</a>';
+        $url = plugin_dir_url() . "tcS3/tcS3-ajax.php?action=push_single&postID={$post->ID}";
+        $actions['regenerate_thumbnails'] = '<a class="push_single_to_S3" href="' . esc_url( $url ) . '" title="' . esc_attr("Send this file to S3") . '">' . "Send this file to S3" . '</a>';
 
         return $actions;
     }
 
+    public function get_all_attachments($skip_synced = true){
+        global $wpdb;
 
-    /*   * *** admin interface **** */
+        $whereClause = ($skip_synced) ? "AND b.post_id IS NULL" : "";
+
+        $attachments = $wpdb->get_results("
+            SELECT ID 
+            FROM $wpdb->posts as a
+            LEFT JOIN $wpdb->postmeta as b ON a.ID = b.post_id AND b.meta_key = 'is_on_s3'
+            WHERE a.post_type = 'attachment'
+            {$whereClause}
+            GROUP BY ID
+            ORDER BY ID DESC
+        ");
+
+        foreach($attachments as $id){
+            $ids[] = intval($id->ID);
+        }
+
+        return $ids;
+    }
+
+    /***** admin interface *****/
 
     public function add_plugin_page() {
         add_options_page(
             'tcS3 Admin', 'tcS3 Admin configuration', 'manage_options', 'tcS3-admin', array($this, 'create_admin_page')
         );
+    }
+
+    public function enqueue_admin_scripts(){
+
+        wp_enqueue_script("jquery");
+        wp_enqueue_script( 'jquery-ui-progressbar');  // the progress bar
+        wp_enqueue_script("tcS3", plugin_dir_url() . "tcS3/js/tcS3.js");
+        wp_enqueue_style("jquery-ui", "//ajax.googleapis.com/ajax/libs/jqueryui/1.11.1/themes/smoothness/jquery-ui.css");
+        wp_enqueue_style("tcS3", plugin_dir_url() . "tcS3/css/tcS3.css");
+
     }
 
     public function create_admin_page() {
@@ -322,6 +360,15 @@ class tcS3 {
                 add_settings_field(
                     's3_delete_local', 'Delete local file after upload', array($this, 's3_delete_local_callback'), 'tcS3-setting-admin', 'tcS3-settings'
                 );
+
+                add_settings_section(
+                    'tcS3-migration', // ID
+                    'tcS3 Migration Tools', // Title
+                    array($this, 'migration_output'), // Callback
+                    'tcS3-setting-admin' // Page
+                );
+
+
             }
 
             public function sanitize($input) {
@@ -337,6 +384,18 @@ class tcS3 {
 
             public function print_section_info() {
                 
+            }
+
+
+            public function migration_output() {
+                echo "
+                    <div class='migration'>
+                        <div class='progressbar'>
+                            <div class='progressbar-label'></div>
+                        </div>
+                        <input id='s3_sync' type='button' class='button sync' value='Sync' data-plugin-path='".plugin_dir_url()."tcS3/' />
+                    </div>
+                ";
             }
 
             public function aws_key_callback() {

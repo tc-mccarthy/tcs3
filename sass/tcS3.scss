@@ -1,0 +1,28 @@
+td.s3{
+	img{
+		display: none;
+
+		&.active{
+			display: block;
+		}
+
+		&.notuploaded{
+			opacity: .5;
+		}
+
+	}
+}
+
+.migration{
+	.progressbar {
+	    position: relative;
+
+		.progressbar-label {
+		    position: absolute;
+		    left: 50%;
+		    top: 4px;
+		    font-weight: bold;
+		    text-shadow: 1px 1px 0 #fff;
+		}
+	}
+}
