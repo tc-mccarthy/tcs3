@@ -22,11 +22,14 @@ class tcS3 {
     public $uploads;
     public $options;
     public $uploadDir;
+    public $pluginDir;
 
     /**
      * Construct the plugin object
      */
     public function __construct() {
+
+        $this->pluginDir = @plugin_dir_url();
 
         //send new uploads to S3
         add_filter('wp_generate_attachment_metadata', array($this, 'create_on_S3'));
@@ -62,10 +65,9 @@ class tcS3 {
         //set up aws
         $this->aws = Aws::factory($this->build_aws_config());
         $this->s3Client = $this->aws->get('s3');
-
         $this->uploads = wp_upload_dir();
 
-        preg_match("/\/wp-content(.+)$/", $uploads["basedir"], $matches);
+        preg_match("/\/wp-content(.+)$/", $this->uploads["basedir"], $matches);
         $this->uploadDir = $matches[1];
     }
 
@@ -112,7 +114,6 @@ class tcS3 {
 
             //if the file doesn't exist, skip it
             if (!file_exists($localFile)) {
-                $this->dump_to_log($localFile . " doesn't exist");
                 continue;
             }
 
@@ -248,7 +249,7 @@ class tcS3 {
 
     public function push_single_to_S3( $actions, $post ) {
        
-        $url = plugin_dir_url() . "tcS3/tcS3-ajax.php?action=push_single&postID={$post->ID}";
+        $url = $this->pluginDir . "tcS3/tcS3-ajax.php?action=push_single&postID={$post->ID}";
         $actions['regenerate_thumbnails'] = '<a class="push_single_to_S3" href="' . esc_url( $url ) . '" title="' . esc_attr("Send this file to S3") . '">' . "Send this file to S3" . '</a>';
 
         return $actions;
@@ -288,9 +289,9 @@ class tcS3 {
 
         wp_enqueue_script("jquery");
         wp_enqueue_script( 'jquery-ui-progressbar');  // the progress bar
-        wp_enqueue_script("tcS3", plugin_dir_url() . "tcS3/js/tcS3.js");
+        wp_enqueue_script("tcS3", $this->pluginDir . "tcS3/js/tcS3.js");
         wp_enqueue_style("jquery-ui", "//ajax.googleapis.com/ajax/libs/jqueryui/1.11.1/themes/smoothness/jquery-ui.css");
-        wp_enqueue_style("tcS3", plugin_dir_url() . "tcS3/css/tcS3.css");
+        wp_enqueue_style("tcS3", $this->pluginDir . "tcS3/css/tcS3.css");
 
     }
 
@@ -393,7 +394,7 @@ class tcS3 {
                         <div class='progressbar'>
                             <div class='progressbar-label'></div>
                         </div>
-                        <input id='s3_sync' type='button' class='button sync' value='Sync' data-plugin-path='".plugin_dir_url()."tcS3/' />
+                        <input id='s3_sync' type='button' class='button sync' value='Sync' data-plugin-path='" . $this->pluginDir . "tcS3/' />
                     </div>
                 ";
             }
