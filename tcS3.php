@@ -107,6 +107,8 @@ class tcS3 {
 
     //upload a series of keys to S3
     public function push_to_s3($keys) {
+        set_time_limit(120);
+        
         $errors = 0;
         foreach ($keys as $key) {
             $localFile = $this->uploads["basedir"] . "/" . $key;
