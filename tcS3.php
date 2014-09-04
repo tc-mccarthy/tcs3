@@ -16,7 +16,7 @@ use Aws\S3\Model\MultipartUpload\UploadBuilder;
 
 class tcS3 {
 
-//declare variables
+    //declare variables
     public $aws;
     public $s3Client;
     public $uploads;
