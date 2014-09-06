@@ -114,7 +114,9 @@ class tcS3 {
             "local_url" => "http://{$_SERVER["HTTP_HOST"]}/wp-content/",
             "s3_cache_time" => 172800,
             "s3_permalink_reset" => 0,
-            "s3_redirect_cache" => 86400
+            "s3_redirect_cache_time" => 86400,
+            "s3_redirect_cache_memcached" => ""
+
             );
 
         if(is_plugin_active_for_network("tcS3/tcS3.php")){
@@ -279,20 +281,46 @@ class tcS3 {
     public function tcS3_redirect_cache($key, $value = null, $action = "read"){
         $cacheDirectory = dirname(__FILE__) . "/cache/";
         $key = md5($key);
-        $redirect_cache_time = 86400;
+        $redirect_cache_time = $this->options["s3_redirect_cache_time"];
+        $use_memcached = false;
+
+        if(class_exists("Memcached")){ //use memcached when possible and configured
+            $memcached = new Memcached();
+            $memcacheHosts = $this->options["s3_redirect_cache_memcached"];
+            $memcacheHosts = preg_split("/,\s*/", $memcacheHosts);
+            foreach($memcacheHosts as $host){
+                $host = explode(":", $host);
+                $servers[] = array($host[0], $host[1]);
+            }
+            $memcached->addServers($servers);
+
+            if($memcached->set("test", "1")){
+                $use_memcached = true; //if memcached is accessible
+            }
+        }
+       
 
         if($redirect_cache_time > 0){ //if caching is enabled
             switch($action){
                 case "read":
+                    if($use_memcached){
+                        return $memcached->get($key);
+                    }
+                    
                     if(file_exists($cacheDirectory . $key) && (time() - filemtime($cacheDirectory . $key)) <= $redirect_cache_time){
                         $url = file_get_contents($cacheDirectory . $key);
                         return $url;
                     }
+
                     return false;
                     break;
 
                 case "write":
-                    file_put_contents($cacheDirectory . $key,  $value);
+                    if($use_memcached){
+                        $memcached->set($key, $value, $redirect_cache_time);
+                    } else{
+                        file_put_contents($cacheDirectory . $key,  $value);
+                    }
                     break;
             }
         } else{ //if caching is disabled
@@ -360,9 +388,9 @@ class tcS3 {
     }
 
     public function push_single_to_S3( $actions, $post ) {
-
+        $this->dump_to_log($actions);
         $url = $this->pluginDir . "tcS3/tcS3-ajax.php?action=push_single&postID={$post->ID}";
-        $actions['regenerate_thumbnails'] = '<a class="push_single_to_S3" href="' . esc_url( $url ) . '" title="' . esc_attr("Send this file to S3") . '">' . "Send this file to S3" . '</a>';
+        $actions['push_to_s3'] = '<a class="push_single_to_S3" href="' . esc_url( $url ) . '" title="' . esc_attr("Send this file to S3") . '">' . "Send this file to S3" . '</a>';
 
         return $actions;
     }
@@ -524,8 +552,14 @@ class tcS3 {
         );
 
         add_settings_field(
-            's3_redirect_cache', 'Cache time for S3 objects', array($this, 's3_cache_time_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
+            's3_redirect_cache_time', 'Cache time for S3 object redirects', array($this, 's3_redirect_cache_time_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
         );
+
+        if(class_exists("Memcached")){
+            add_settings_field(
+                's3_redirect_cache_memcached', 'Memcached host(s)', array($this, 's3_redirect_cache_memcached_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
+            );
+        }
 
         add_settings_section(
                     'tcS3-migration', // ID
@@ -688,6 +722,24 @@ class tcS3 {
     public function s3_cache_time_callback() {
         $optionKey = 's3_cache_time';
         $helperText = 'How long (in seconds) should the cache headers be set for on S3 objects? (This will help keep your S3 bill down and improve page load for returning visitors)';
+        
+        printf(
+            '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
+            );
+    }
+
+    public function s3_redirect_cache_time_callback() {
+        $optionKey = 's3_redirect_cache_time';
+        $helperText = 'How long should the redirect lookups be cached? This will improve response time in the file lookup. (Set this to 0 to disabled redirect lookup caching)';
+        
+        printf(
+            '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
+            );
+    }
+
+    public function s3_redirect_cache_memcached_callback() {
+        $optionKey = 's3_redirect_cache_memcached';
+        $helperText = 'A comma separated list of memcached servers (in hostname:port) format. Leave this blank to not use memcached.';
         
         printf(
             '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
