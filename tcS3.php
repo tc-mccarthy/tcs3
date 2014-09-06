@@ -112,7 +112,8 @@ class tcS3 {
             "delete_after_push" => 1,
             "s3_url" => "",
             "local_url" => "http://{$_SERVER["HTTP_HOST"]}/wp-content/",
-            "s3_cache_time" => 172800
+            "s3_cache_time" => 172800,
+            "s3_permalink_reset" => 0
             );
 
         if(is_plugin_active_for_network("tcS3/tcS3.php")){
@@ -242,16 +243,22 @@ class tcS3 {
     }
 
     //send image to browser
-
     public function load_image(){
-        global $wp_query; 
+        global $wp_query;
 
-        if ($wp_query->get('image_key')) {
-            $key = preg_replace("/[*]/", ".", rtrim($wp_query->get('image_key'), "/"));
+        if ($wp_query->get('file')) {
+            $key = preg_replace("/[*]/", ".", rtrim($wp_query->get('file'), "/"));
             $s3URL = $this->options["s3_url"];
             $localURLs = preg_split("/,\s*/", $this->options["local_url"]);
+            
+            if($this->s3_cache($key)){
+                status_header(301);
+                header("Location: " . $s3URL . $key);
+                exit();
+            }
 
             if($this->detect_image_by_header($s3URL . $key)){// if image is on S3
+                $this->s3_cache($key, "write");
                 status_header(301);
                 header("Location: " . $s3URL . $key);
                 exit();
@@ -267,6 +274,26 @@ class tcS3 {
 
             $wp_query->set_404();
             status_header(404);
+        }
+    }
+
+    //remember when an image is on S3
+    public function s3_cache($key, $action = "read"){
+        $cacheDirectory = dirname(__FILE__) . "/cache/";
+        $file_hash = md5($key);
+        $redirect_cache = 86400;
+
+        switch($action){
+            case "read":
+                if(file_exists($cacheDirectory . $file_hash) && filemtime($cacheDirectory . $file_hash) <= $redirect_cache){
+                    return true;
+                }
+                return false;
+                break;
+
+            case "write":
+                file_put_contents($cacheDirectory . $file_hash,  "");
+                break;
         }
     }
 
@@ -356,14 +383,19 @@ class tcS3 {
     public function add_images_rewrite(){
         global $wp_rewrite;
 
-        add_rewrite_rule('^tcS3/(.+)$', 'index.php?image_key=$matches[1]', 'top');
-        add_rewrite_tag('%image_key%', '([^&]+)');
+        add_rewrite_rule('^tcS3_media/(.+)$', 'index.php?file=$matches[1]', 'top');
+        add_rewrite_tag('%file%', '([^&]+)');
+        
+        if(!get_option("tcS3_rewrite_flush")){
+            $wp_rewrite->flush_rules();
+            update_option("tcS3_rewrite_flush", 1);
+        }
     }
 
     public function build_attachment_url($url){
         preg_match("/\/([0-9]+\/[0-9]+\/[^\/]+)$/", $url, $matches);
         $protocol = (isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] != "") ? "https" : "http";
-        $url =  $protocol . "://" . $_SERVER["HTTP_HOST"] . "/tcS3" . $this->uploadDir . '/' . $matches[1];
+        $url =  $protocol . "://" . $_SERVER["HTTP_HOST"] . "/tcS3_media" . $this->uploadDir . '/' . $matches[1];
         return $url;
 
     }
@@ -509,7 +541,7 @@ class tcS3 {
         echo '<pre>
         location ~*/tcS3/ {
             if (!-e $request_filename) {
-                rewrite ^.*/tcS3/(.*)$ /index.php?image_key=$1 last;
+                rewrite ^.*/tcS3/(.*)$ /index.php?file=$1 last;
             }
         }
         </pre>

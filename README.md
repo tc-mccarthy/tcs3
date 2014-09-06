@@ -26,10 +26,6 @@ The plugin's use of the AWS SDK for PHP allows for a more flexible configuration
 
 <h3>Coming (very) soon</h3>
 <ul>
-	<li> Single configuration for multisite environment -- right now network activating will require webmasters to define the settings for each of their site's individually (which may be what you want, but in many cases one set of settings is all that's required)
-	
-	<li> Negotiation for load balanced environments -- currently this plugin is capable of pushing new uploads to S3 no matter how many servers you have. But a push of previously uploaded files is more difficult because they're probably scattered across multiple application servers.
-
 	<li> Mark files as synced if they're improperly marked as not synced. For extremely large libraries, pushing your previous uploads via this plugin is not advised as PHP can be expensive and may timeout. Savvy developers/system administrators will have other ways of syncing previous uploads to S3 and should be able to mark certain or all items as synced to S3.
 </ul>
 
