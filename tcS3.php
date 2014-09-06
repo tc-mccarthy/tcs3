@@ -99,7 +99,7 @@ class tcS3 {
             "access_secret" => "",
             "delete_after_push" => 1,
             "s3_url" => "",
-            "local_url" => "",
+            "local_url" => "http://{$_SERVER["HTTP_HOST"]}/wp-content/uploads",
             "s3_cache_time" => 172800
             );
 
@@ -394,6 +394,7 @@ class tcS3 {
                     array($this, 'sanitize') // Sanitize
                     );
 
+        //primary config
         add_settings_section(
                     'tcS3-settings', // ID
                     'tcS3 Configuration Parameters', // Title
@@ -433,20 +434,30 @@ class tcS3 {
             's3_bucket_region', 'S3 Bucket Region', array($this, 's3_bucket_region_callback'), 'tcS3-setting-admin', 'tcS3-settings'
             );
 
+
+        //advanced settings
+
+        add_settings_section(
+                    'tcS3-advanced-settings', // ID
+                    'tcS3 Advanced Configuration', // Title
+                    array($this, 'print_advanced_section_warning'), // Callback
+                    'tcS3-setting-admin' // Page
+                    );
+
         add_settings_field(
-            's3_concurrent', 'S3 Concurrent Connections', array($this, 's3_concurrent_callback'), 'tcS3-setting-admin', 'tcS3-settings'
+            's3_concurrent', 'S3 Concurrent Connections', array($this, 's3_concurrent_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
             );
 
         add_settings_field(
-            's3_min_part_size', 'S3 Minimum Part Size (MB)', array($this, 's3_min_part_size_callback'), 'tcS3-setting-admin', 'tcS3-settings'
+            's3_min_part_size', 'S3 Minimum Part Size (MB)', array($this, 's3_min_part_size_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
             );
 
         add_settings_field(
-            's3_delete_local', 'Delete local file after upload', array($this, 's3_delete_local_callback'), 'tcS3-setting-admin', 'tcS3-settings'
+            's3_delete_local', 'Delete local file after upload', array($this, 's3_delete_local_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
             );
 
         add_settings_field(
-            's3_cache_time', 'Cache time for S3 objects', array($this, 's3_cache_time_callback'), 'tcS3-setting-admin', 'tcS3-settings'
+            's3_cache_time', 'Cache time for S3 objects', array($this, 's3_cache_time_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
             );
 
         add_settings_section(
@@ -470,10 +481,22 @@ class tcS3 {
         return $new_input;
     }
 
+    //section callbacks
     public function print_section_info() {
-
+        echo "<div class='postbox'><div class='inside'>Running nginx? You'll need to drop a custom rule into your configuration for images to load properly. Copy and paste the code below into your nginx configuration for this site";
+        echo '<pre>
+        location ~*/tcS3/ {
+            if (!-e $request_filename) {
+                rewrite ^.*/tcS3/(.*)$ /index.php?image_key=$1 last;
+            }
+        }
+        </pre>
+        </div></div>';
     }
 
+    public function print_advanced_section_warning() {
+        echo "<div class='postbox'><div class='inside'>These are advanced settings and do not need to be altered for this plugin to do its job. Only change these values if you know what you're doing!</div></div>";
+    }
 
     public function migration_output() {
         echo "
@@ -533,7 +556,7 @@ class tcS3 {
 
     public function local_url_callback() {
         $optionKey = 'local_url';
-        $helperText = 'The URL or URLs (comma separated) and path to where your files are stored locally -- this will be used as a fallback should the sync process fail for any upload so that your images always display.';
+        $helperText = 'The URL or URLs (comma separated) and path to where your local uploads file (e.g. http://www.example.com/wp-content/uploads would be http://www.example.com/wp-content/). This will be used as a fallback should the sync process fail for any upload so that your images always display.';
 
         printf(
             '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
