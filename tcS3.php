@@ -14,6 +14,9 @@ use Aws\Common\Aws;
 use Aws\Common\Exception\MultipartUploadException;
 use Aws\S3\Model\MultipartUpload\UploadBuilder;
 
+if ( ! function_exists( 'is_plugin_active_for_network' ) )
+    require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
+
 class tcS3 {
 
     //declare variables
@@ -23,6 +26,7 @@ class tcS3 {
     public $options;
     public $uploadDir;
     public $pluginDir;
+    public $networkActivated;
 
     /**
      * Construct the plugin object
@@ -30,27 +34,6 @@ class tcS3 {
     public function __construct() {
 
         $this->pluginDir = @plugin_dir_url();
-
-        //send new uploads to S3
-        add_filter('wp_generate_attachment_metadata', array($this, 'create_on_S3'));
-
-        //send delete requests to S3
-        add_action("delete_attachment", array($this, "delete_from_library"));
-
-        //send crop/rotate/file changes to S3
-        add_filter('wp_update_attachment_metadata', array($this, 'update_on_s3'), 10, 5);
-
-        //setup admin menu
-        add_action('admin_menu', array($this, 'add_plugin_page'));
-        add_action('admin_init', array($this, 'page_init'));
-        add_action('admin_init', array($this, 'enqueue_admin_scripts'));
-
-        //add new column to media library
-        add_filter('manage_media_columns', array($this, 'create_s3_media_column'));
-        add_action('manage_media_custom_column', array($this, 'create_s3_media_column_content'), 10, 2);
-
-        //add the push to S3 link to individual attachments
-        add_filter( 'media_row_actions', array( $this, 'push_single_to_S3' ), 10, 2 );
 
         //setup plugin on activation
         register_activation_hook(__FILE__, array($this, 'activate'));
@@ -61,22 +44,51 @@ class tcS3 {
         }
 
         //setup options
-        $this->options = get_option("tcS3_options");
+        $this->networkActivated = (is_plugin_active_for_network("tcS3/tcS3.php")) ? true : false;
+        $this->options = ($this->networkActivated) ? get_site_option("tcS3_options") : get_option("tcS3_options");
+        $use_S3 = ($this->options["access_key"] != "" && $this->options["access_secret"] != "" && $this->options["bucket"] != "" && $this->options["bucket_path"] != "" && $this->options["bucket_region"] != "") ? true : false;
 
-        //set up aws
-        $this->aws = Aws::factory($this->build_aws_config());
-        $this->s3Client = $this->aws->get('s3');
-        $this->uploads = wp_upload_dir();
+        //setup admin menu
+        if($this->networkActivated){
+            add_action('network_admin_menu', array($this, 'add_network_plugin_page'));
+        } else{
+            add_action('admin_menu', array($this, 'add_plugin_page'));    
+        }
+        
+        add_action('admin_init', array($this, 'page_init'));
+        add_action('admin_init', array($this, 'enqueue_admin_scripts'));
 
-        //store the upload directory path
-        preg_match("/\/wp-content(.+)$/", $this->uploads["basedir"], $matches);
-        $this->uploadDir = $matches[1];
+        if($use_S3){
+            //send new uploads to S3
+            add_filter('wp_generate_attachment_metadata', array($this, 'create_on_S3'));
 
-        //add the rewrite rule for the CDN lookup script and update the frontend to redirect to it
-        add_action('init', array($this, 'add_images_rewrite'), 10, 0);
-        add_action('template_redirect', array($this, 'load_image'));
-        add_filter('wp_get_attachment_url', array($this, 'build_attachment_url'));
+            //send delete requests to S3
+            add_action("delete_attachment", array($this, "delete_from_library"));
 
+            //send crop/rotate/file changes to S3
+            add_filter('wp_update_attachment_metadata', array($this, 'update_on_s3'), 10, 5);
+
+            //add new column to media library
+            add_filter('manage_media_columns', array($this, 'create_s3_media_column'));
+            add_action('manage_media_custom_column', array($this, 'create_s3_media_column_content'), 10, 2);
+
+            //add the push to S3 link to individual attachments
+            add_filter( 'media_row_actions', array( $this, 'push_single_to_S3' ), 10, 2 );
+
+            //set up aws
+            $this->aws = Aws::factory($this->build_aws_config());
+            $this->s3Client = $this->aws->get('s3');
+            $this->uploads = wp_upload_dir();
+
+            //store the upload directory path
+            preg_match("/\/wp-content(.+)$/", $this->uploads["basedir"], $matches);
+            $this->uploadDir = $matches[1];
+
+            //add the rewrite rule for the CDN lookup script and update the frontend to redirect to it
+            add_action('init', array($this, 'add_images_rewrite'), 10, 0);
+            add_action('template_redirect', array($this, 'load_image'));
+            add_filter('wp_get_attachment_url', array($this, 'build_attachment_url'));
+        }
     }
 
     //config functions
@@ -99,11 +111,16 @@ class tcS3 {
             "access_secret" => "",
             "delete_after_push" => 1,
             "s3_url" => "",
-            "local_url" => "http://{$_SERVER["HTTP_HOST"]}/wp-content/uploads",
+            "local_url" => "http://{$_SERVER["HTTP_HOST"]}/wp-content/",
             "s3_cache_time" => 172800
             );
 
-        add_option("tcS3_options", $options);
+        if(is_plugin_active_for_network("tcS3/tcS3.php")){
+            add_site_option("tcS3_options", $options);
+        } else{
+            add_option("tcS3_options", $options);   
+        }
+        
     }
 
     /**
@@ -118,7 +135,6 @@ class tcS3 {
     //upload a series of keys to S3
     public function push_to_s3($keys) {
         set_time_limit(120);
-        
         $errors = 0;
         foreach ($keys as $key) {
             $localFile = $this->uploads["basedir"] . "/" . $key;
@@ -360,6 +376,12 @@ class tcS3 {
             );
     }
 
+    public function add_network_plugin_page() {
+        add_submenu_page(
+            'settings.php', 'tcS3 Admin', 'tcS3 Admin configuration', 'manage_options', 'tcS3-admin', array($this, 'create_admin_page')
+            );
+    }
+
     public function enqueue_admin_scripts(){
 
         wp_enqueue_script("jquery");
@@ -375,7 +397,7 @@ class tcS3 {
         <div class="wrap">
             <?php screen_icon(); ?>
             <h2>tcS3 Settings</h2>           
-            <form method="post" action="options-general.php?page=tcS3-admin">
+            <form method="post" action="<?php echo $_SERVER["REQUEST_URI"]; ?>">
                 <?php
         // This prints out all hidden setting fields
                 settings_fields('tcS3_option_group');
@@ -628,6 +650,8 @@ class tcS3 {
     }
 
     public function save_s3_settings() {
+       $this->networkActivated = is_plugin_active_for_network("tcS3/tcS3.php");
+
        foreach ($_POST["tcS3_option"] as $key => $value) {
            if ($key == "bucket_path") {
                $options[$key] = "/" . trim($value, "/");
@@ -650,8 +674,12 @@ class tcS3 {
              }
              $options[$key] = trim(sanitize_text_field($value));
          }
-
-         update_option("tcS3_options", $options);
+         if($this->networkActivated){
+            update_site_option("tcS3_options", $options);
+         } else{
+             update_option("tcS3_options", $options);   
+         }
+         
      }
 
      public function array_to_options($arrays) {
