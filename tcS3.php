@@ -113,7 +113,8 @@ class tcS3 {
             "s3_url" => "",
             "local_url" => "http://{$_SERVER["HTTP_HOST"]}/wp-content/",
             "s3_cache_time" => 172800,
-            "s3_permalink_reset" => 0
+            "s3_permalink_reset" => 0,
+            "s3_redirect_cache" => 86400
             );
 
         if(is_plugin_active_for_network("tcS3/tcS3.php")){
@@ -251,24 +252,21 @@ class tcS3 {
             $s3URL = $this->options["s3_url"];
             $localURLs = preg_split("/,\s*/", $this->options["local_url"]);
             
-            if($this->s3_cache($key)){
-                status_header(301);
-                header("Location: " . $s3URL . $key);
-                exit();
+            if($url = $this->tcS3_redirect_cache($key)){ //if image URL is in cache
+                $this->tcS3_redirect_to_image($url);
             }
 
             if($this->detect_image_by_header($s3URL . $key)){// if image is on S3
-                $this->s3_cache($key, "write");
-                status_header(301);
-                header("Location: " . $s3URL . $key);
-                exit();
+                $url = $s3URL . $key;
+                $this->tcS3_redirect_cache($key, $url, "write");
+                $this->tcS3_redirect_to_image($url);
             }
 
             foreach($localURLs as $localURL){
-                if($this->detect_image_by_header($localURL . $key)){// if image is on S3
-                    status_header(301);
-                    header("Location: " . $localURL . $key);
-                    exit();
+                if($this->detect_image_by_header($localURL . $key)){// if image is on local
+                    $url = $localURL . $key;
+                    $this->tcS3_redirect_cache($key, $url, "write");
+                    $this->tcS3_redirect_to_image($url);
                 }
             }
 
@@ -278,23 +276,34 @@ class tcS3 {
     }
 
     //remember when an image is on S3
-    public function s3_cache($key, $action = "read"){
+    public function tcS3_redirect_cache($key, $value = null, $action = "read"){
         $cacheDirectory = dirname(__FILE__) . "/cache/";
-        $file_hash = md5($key);
-        $redirect_cache = 86400;
+        $key = md5($key);
+        $redirect_cache_time = 86400;
 
-        switch($action){
-            case "read":
-                if(file_exists($cacheDirectory . $file_hash) && filemtime($cacheDirectory . $file_hash) <= $redirect_cache){
-                    return true;
-                }
-                return false;
-                break;
+        if($redirect_cache_time > 0){ //if caching is enabled
+            switch($action){
+                case "read":
+                    if(file_exists($cacheDirectory . $key) && (time() - filemtime($cacheDirectory . $key)) <= $redirect_cache_time){
+                        $url = file_get_contents($cacheDirectory . $key);
+                        return $url;
+                    }
+                    return false;
+                    break;
 
-            case "write":
-                file_put_contents($cacheDirectory . $file_hash,  "");
-                break;
+                case "write":
+                    file_put_contents($cacheDirectory . $key,  $value);
+                    break;
+            }
+        } else{ //if caching is disabled
+            return false; 
         }
+    }
+
+    public function tcS3_redirect_to_image($url){
+        status_header(301);
+        header("Location: " . $url);
+        exit();
     }
 
     /*   * ***wordpress extensions***** */
@@ -500,19 +509,23 @@ class tcS3 {
 
         add_settings_field(
             's3_concurrent', 'S3 Concurrent Connections', array($this, 's3_concurrent_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
-            );
+        );
 
         add_settings_field(
             's3_min_part_size', 'S3 Minimum Part Size (MB)', array($this, 's3_min_part_size_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
-            );
+        );
 
         add_settings_field(
             's3_delete_local', 'Delete local file after upload', array($this, 's3_delete_local_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
-            );
+        );
 
         add_settings_field(
             's3_cache_time', 'Cache time for S3 objects', array($this, 's3_cache_time_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
-            );
+        );
+
+        add_settings_field(
+            's3_redirect_cache', 'Cache time for S3 objects', array($this, 's3_cache_time_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
+        );
 
         add_settings_section(
                     'tcS3-migration', // ID
@@ -539,9 +552,9 @@ class tcS3 {
     public function print_section_info() {
         echo "<div class='postbox'><div class='inside'>Running nginx? You'll need to drop a custom rule into your configuration for images to load properly. Copy and paste the code below into your nginx configuration for this site";
         echo '<pre>
-        location ~*/tcS3/ {
+        location ~*/tcS3_media/ {
             if (!-e $request_filename) {
-                rewrite ^.*/tcS3/(.*)$ /index.php?file=$1 last;
+                rewrite ^.*/tcS3_media/(.*)$ /index.php?file=$1 last;
             }
         }
         </pre>
