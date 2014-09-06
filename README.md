@@ -13,7 +13,7 @@ This plugin is being released in beta -- the wide popularity of S3 makes it diff
 	<li> Adds a redundancy layer where it lightly but intelligently figures out if your image is available on S3 and falls back to your webserver's copy of it if it isn't.
 </ul>
 
-The plugin, on install, also creates a layer of redundancy to help improve the up-time of your images. It sets up a WP Rewrite rule and updates your images to use this new URL scheme. The rewrite URL references a method within the plugin which reads the HTTP status of the URL to the object on S3. If the method determines the object is there it will 301 redirect the browser to your image on S3. If the object does not resolve on S3 (upload fails, S3 has an outage, etc.) it will check the headers to the URL of the same object on your webserver and 301 redirects the browser there to render the image. If that also fails the image will then 404.
+The check mentioned above will go a long way to help improve the up-time of your images. It sets up a WP Rewrite rule and then modifies your images to use this new URL scheme. Accessing the images through the new URL allows the plugin to check the file's headers on S3 to determing if the file can be loaded form your bucket. If it can, your users browser is redirected to the image on S3. If it can't, the plugin then checks the local URLs you provide in the plugin setup and if it finds the image there redirects the user's browser there. If that also fails the image 404s.
 
 <h3>Advanced features</h3>
 
@@ -26,7 +26,7 @@ The plugin's use of the AWS SDK for PHP allows for a more flexible configuration
 
 <h3>Coming (very) soon</h3>
 <ul>
-	<li> Single configuration for multisite environment -- right now network activating will require webmaster's to define the settings for each of their site's individually (which may be what you want, but in many cases one set of settings is all that's required)
+	<li> Single configuration for multisite environment -- right now network activating will require webmasters to define the settings for each of their site's individually (which may be what you want, but in many cases one set of settings is all that's required)
 	
 	<li> Negotiation for load balanced environments -- currently this plugin is capable of pushing new uploads to S3 no matter how many servers you have. But a push of previously uploaded files is more difficult because they're probably scattered across multiple application servers.
 
@@ -34,4 +34,4 @@ The plugin's use of the AWS SDK for PHP allows for a more flexible configuration
 </ul>
 
 <h3>Unsolicited advice</h3>
-While S3 is relatively inexpensive (very inexpensive the more you use it), it's not free and it's not just how much you upload to it, but how much traffic you're getting. If there are a lot of get requests going to it (take a look at <a href="http://aws.amazon.com/s3/pricing/">Amazon's S3 pricing</a> guide) it could get expensive. The cache headers being assigned by this plugin will certainly help, but if you sign up for a <a href="http://www.cloudflare.com">free Cloudflare account</a> and set up your <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html">S3 bucket as a subdomain</a> that Cloudflare is caching, responses to initial requests will come from S3, but many subsequent requests will hit Cloudflare and cost you nothing (and images will load faster because Cloudflare is a CDN).
+While S3 is relatively inexpensive (very inexpensive the more you use it), it's not free and it's not just how much you upload to it, but how much traffic you're getting. If your bucket is receiving a lot of GET requests (which happens when you have a lot of traffic on your site) it could get expensive (take a look at <a href="http://aws.amazon.com/s3/pricing/">Amazon's S3 pricing</a> guide). The cache headers being assigned by this plugin will certainly help, but if you sign up for a <a href="http://www.cloudflare.com">free Cloudflare account</a> and set up your <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html">S3 bucket as a subdomain</a> that Cloudflare is caching, responses to initial requests will come from S3, but many subsequent requests will hit Cloudflare and cost you nothing (and images will load faster because Cloudflare is a CDN).
