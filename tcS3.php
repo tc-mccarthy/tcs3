@@ -8,14 +8,12 @@
  * Author URI: http://www.tc-mccarthy.com
  * License: GPL2
  */
+
 require(dirname(__FILE__) . "/aws/aws-autoloader.php");
 
 use Aws\Common\Aws;
 use Aws\Common\Exception\MultipartUploadException;
 use Aws\S3\Model\MultipartUpload\UploadBuilder;
-
-if ( ! function_exists( 'is_plugin_active_for_network' ) )
-    require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
 
 class tcS3 {
 
@@ -44,7 +42,7 @@ class tcS3 {
         }
 
         //setup options
-        $this->networkActivated = (is_plugin_active_for_network("tcS3/tcS3.php")) ? true : false;
+        $this->networkActivated = $this->network_activation_check();
         $this->options = ($this->networkActivated) ? get_site_option("tcS3_options") : get_option("tcS3_options");
         $use_S3 = ($this->options["access_key"] != "" && $this->options["access_secret"] != "" && $this->options["bucket"] != "" && $this->options["bucket_path"] != "" && $this->options["bucket_region"] != "") ? true : false;
 
@@ -125,7 +123,7 @@ class tcS3 {
 
             );
 
-        if(is_plugin_active_for_network("tcS3/tcS3.php")){
+        if($this->networkActivated){
             add_site_option("tcS3_options", $options);
         } else{
             add_option("tcS3_options", $options);   
@@ -138,6 +136,12 @@ class tcS3 {
      */
     public static function deactivate() {
         // Do nothing
+    }
+
+    public function network_activation_check(){
+        if ( ! function_exists( 'is_plugin_active_for_network' ) )
+            require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
+        return (is_plugin_active_for_network("tcS3/tcS3.php")) ? true : false;
     }
 
     /******utility functions********/
@@ -244,7 +248,30 @@ class tcS3 {
         $check = explode("\n", curl_exec($curl));
         curl_close($curl);
         
-        if (trim($check[0]) == 'HTTP/1.1 200 OK') {
+        $http_accepts = array(
+            "HTTP/1.1 200 OK",
+            "HTTP/1.1 201 Created",
+            "HTTP/1.1 202 Accepted",
+            "HTTP/1.1 203 Non-Authoritative Information",
+            "HTTP/1.1 204 No Content",
+            "HTTP/1.1 205 Reset Content",
+            "HTTP/1.1 206 Partial Content",
+            "HTTP/1.1 207 Multi-Status",
+            "HTTP/1.1 208 Already Reported",
+            "HTTP/1.1 226 IM Used",
+            "HTTP/1.1 300 Multiple Choices",
+            "HTTP/1.1 301 Moved Permanently",
+            "HTTP/1.1 302 Found",
+            "HTTP/1.1 303 See Other",
+            "HTTP/1.1 304 Not Modified",
+            "HTTP/1.1 305 Use Proxy",
+            "HTTP/1.1 306 Switch Proxy",
+            "HTTP/1.1 307 Temporary Redirect",
+            "HTTP/1.1 308 Permanent Redirect"
+        );
+
+
+        if (in_array(trim($check[0]), $http_accepts)) {
             return true;
         } else{
             return false;
@@ -761,8 +788,6 @@ class tcS3 {
     }
 
     public function save_s3_settings() {
-       $this->networkActivated = is_plugin_active_for_network("tcS3/tcS3.php");
-
        foreach ($_POST["tcS3_option"] as $key => $value) {
            if ($key == "bucket_path") {
                $options[$key] = "/" . trim($value, "/");
@@ -785,7 +810,8 @@ class tcS3 {
              }
              $options[$key] = trim(sanitize_text_field($value));
          }
-         if($this->networkActivated){
+
+         if($this->network_activation_check()){
             update_site_option("tcS3_options", $options);
          } else{
              update_option("tcS3_options", $options);   
