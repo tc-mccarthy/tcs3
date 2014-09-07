@@ -22,6 +22,7 @@ The plugin's use of the AWS SDK for PHP allows for a more flexible configuration
 <ol>
 	<li> Set cache headers on your image so repeat visitors load the image faster and don't cost you a GET against S3
 	<li> Performs multithreaded uploads on files larger than 5MB -- larger files can take longer for your webserver to send to S3... those can really slow down your site! So, the plugin will split your files up into chunks no smaller than 5MB and send them to S3 that way, seamlessly, without your having to ask.
+	<li> Optional Memcache (only displays when your server supports it) or file system (supported everywhere) caching of header lookup results to save on PHP resource usage. You can set the TTL of the header lookup cache AND the cache headers on S3 right from within the dashboard
 </ol>
 
 <h3>Install</h3>
