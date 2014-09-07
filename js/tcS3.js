@@ -4,6 +4,8 @@
 * Sept. 2, 2014
 */
 
+var ajaxOutput;
+
 (function($){
 	$(document).ready(function(){
 
@@ -12,23 +14,37 @@
 			e.preventDefault();
 			var row = $(this).closest("tr");
 			row.animate({opacity: .25}, 600);
+			console.log(row);
 
-			$.getJSON($(this).attr("href"), function(result){
-				row.animate({opacity: 1}, 600);
-				if(typeof(result.success) != "undefined"){
-					row.find(".notuploaded").removeClass("active");
-					row.find(".uploaded").addClass("active");
-				} else{
-					row.find(".notuploaded").addClass("active");
-					row.find(".uploaded").removeClass("active");
-				}
+			$.ajax({
+				url : $(this).attr("href"),
+				success : function(output){
+					console.log(output);
+					ajaxOutput = output;
+				},
+				error : function(a, b, c){
+					console.log("Error: "+c);
+				},
+				complete : function(){
+					console.log("Done!");
+					row.animate({opacity: 1}, 600);
+					if(typeof(ajaxOutput.success) != "undefined"){
+						row.find(".notuploaded").removeClass("active");
+						row.find(".uploaded").addClass("active");
+					} else{
+						row.find(".notuploaded").addClass("active");
+						row.find(".uploaded").removeClass("active");
+					}
+				},
+				dataType: "json"
 			});
 		});
-
+		
 		$("input#s3_sync").click(function(){
 			var plugin_url = $(this).data("plugin-path"), progressBar = $(".progressbar").progressbar({
 				value: 0
 			}),ids, push_result;
+
 			$.getJSON(plugin_url + "tcS3-ajax.php?action=get_attachment_ids", function(ids){
 				if(ids != "null"){
 					for(i = 0; i < ids.length; i++){

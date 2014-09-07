@@ -1,5 +1,5 @@
 <?php
-
+header('Access-Control-Allow-Origin: *');  //added for wordpress installs where SSL is only enforced on the dashboard
 require_once(dirname(__FILE__) . "/../../../wp-load.php");
 
 $tcS3 = new tcS3();

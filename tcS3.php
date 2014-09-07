@@ -87,7 +87,6 @@ class tcS3 {
 
             //if super admin has flagged marking all uploads as uploaded and it has been done on this site yet, do it.
             if(get_site_option("tcS3_mark_all_attachments") == 1 && (get_option("tcS3_marked_all_attached") != 1 || get_option("tcS3_marked_all_attached") === FALSE)){
-                $this->dump_to_log("Inside function");
                 add_action("init", array($this, "tcS3_mark_all_attached"));
             }
         }
@@ -101,7 +100,7 @@ class tcS3 {
             );
     }
 
-    public static function activate() {
+    public function activate() {
         $options = array(
             "bucket" => "",
             "bucket_path" => "",
@@ -131,7 +130,7 @@ class tcS3 {
     /**
      * Deactivate the plugin
      */
-    public static function deactivate() {
+    public function deactivate() {
         // Do nothing
     }
 
@@ -147,9 +146,10 @@ class tcS3 {
     public function push_to_s3($keys) {
         set_time_limit(120);
         $errors = 0;
+
         foreach ($keys as $key) {
-            $localFile = $this->uploads["basedir"] . "/" . $key;
-            $remoteFile = $this->options["bucket_path"] . "/" . $this->uploadDir . "/" . $key;
+            $localFile = preg_replace("/[\/]+/", "/", $this->uploads["basedir"] . "/" . $key);
+            $remoteFile = preg_replace("/[\/]+/", "/", $this->options["bucket_path"] . "/" . $this->uploadDir . "/" . $key);
 
             //if the file doesn't exist, skip it
             if (!file_exists($localFile)) {
