@@ -14,6 +14,9 @@ use Aws\Common\Aws;
 use Aws\Common\Exception\MultipartUploadException;
 use Aws\S3\Model\MultipartUpload\UploadBuilder;
 
+if ( ! function_exists( 'is_plugin_active_for_network' ) )
+    require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
+
 class tcS3 {
 
     //declare variables
@@ -23,6 +26,7 @@ class tcS3 {
     public $options;
     public $uploadDir;
     public $pluginDir;
+    public $networkActivated;
 
     /**
      * Construct the plugin object
@@ -30,27 +34,6 @@ class tcS3 {
     public function __construct() {
 
         $this->pluginDir = @plugin_dir_url();
-
-        //send new uploads to S3
-        add_filter('wp_generate_attachment_metadata', array($this, 'create_on_S3'));
-
-        //send delete requests to S3
-        add_action("delete_attachment", array($this, "delete_from_library"));
-
-        //send crop/rotate/file changes to S3
-        add_filter('wp_update_attachment_metadata', array($this, 'update_on_s3'), 10, 5);
-
-        //setup admin menu
-        add_action('admin_menu', array($this, 'add_plugin_page'));
-        add_action('admin_init', array($this, 'page_init'));
-        add_action('admin_init', array($this, 'enqueue_admin_scripts'));
-
-        //add new column to media library
-        add_filter('manage_media_columns', array($this, 'create_s3_media_column'));
-        add_action('manage_media_custom_column', array($this, 'create_s3_media_column_content'), 10, 2);
-
-        //add the push to S3 link to individual attachments
-        add_filter( 'media_row_actions', array( $this, 'push_single_to_S3' ), 10, 2 );
 
         //setup plugin on activation
         register_activation_hook(__FILE__, array($this, 'activate'));
@@ -61,22 +44,57 @@ class tcS3 {
         }
 
         //setup options
-        $this->options = get_option("tcS3_options");
+        $this->networkActivated = (is_plugin_active_for_network("tcS3/tcS3.php")) ? true : false;
+        $this->options = ($this->networkActivated) ? get_site_option("tcS3_options") : get_option("tcS3_options");
+        $use_S3 = ($this->options["access_key"] != "" && $this->options["access_secret"] != "" && $this->options["bucket"] != "" && $this->options["bucket_path"] != "" && $this->options["bucket_region"] != "") ? true : false;
 
-        //set up aws
-        $this->aws = Aws::factory($this->build_aws_config());
-        $this->s3Client = $this->aws->get('s3');
-        $this->uploads = wp_upload_dir();
+        //setup admin menu
+        if($this->networkActivated){
+            add_action('network_admin_menu', array($this, 'add_network_plugin_page'));
+        } else{
+            add_action('admin_menu', array($this, 'add_plugin_page'));    
+        }
+        
+        add_action('admin_init', array($this, 'page_init'));
+        add_action('admin_init', array($this, 'enqueue_admin_scripts'));
 
-        //store the upload directory path
-        preg_match("/\/wp-content(.+)$/", $this->uploads["basedir"], $matches);
-        $this->uploadDir = $matches[1];
+        if($use_S3){
+            //send new uploads to S3
+            add_filter('wp_generate_attachment_metadata', array($this, 'create_on_S3'));
 
-        //add the rewrite rule for the CDN lookup script and update the frontend to redirect to it
-        add_action('init', array($this, 'add_images_rewrite'), 10, 0);
-        add_action('template_redirect', array($this, 'load_image'));
-        add_filter('wp_get_attachment_url', array($this, 'build_attachment_url'));
+            //send delete requests to S3
+            add_action("delete_attachment", array($this, "delete_from_library"));
 
+            //send crop/rotate/file changes to S3
+            add_filter('wp_update_attachment_metadata', array($this, 'update_on_s3'), 10, 5);
+
+            //add new column to media library
+            add_filter('manage_media_columns', array($this, 'create_s3_media_column'));
+            add_action('manage_media_custom_column', array($this, 'create_s3_media_column_content'), 10, 2);
+
+            //add the push to S3 link to individual attachments
+            add_filter( 'media_row_actions', array( $this, 'push_single_to_S3' ), 10, 2 );
+
+            //set up aws
+            $this->aws = Aws::factory($this->build_aws_config());
+            $this->s3Client = $this->aws->get('s3');
+            $this->uploads = wp_upload_dir();
+
+            //store the upload directory path
+            preg_match("/\/wp-content(.+)$/", $this->uploads["basedir"], $matches);
+            $this->uploadDir = $matches[1];
+
+            //add the rewrite rule for the CDN lookup script and update the frontend to redirect to it
+            add_action('init', array($this, 'add_images_rewrite'), 10, 0);
+            add_action('template_redirect', array($this, 'load_image'));
+            add_filter('wp_get_attachment_url', array($this, 'build_attachment_url'));
+
+            //if super admin has flagged marking all uploads as uploaded and it has been done on this site yet, do it.
+            if(get_site_option("tcS3_mark_all_attachments") == 1 && (get_option("tcS3_marked_all_attached") != 1 || get_option("tcS3_marked_all_attached") === FALSE)){
+                $this->dump_to_log("Inside function");
+                add_action("init", array($this, "tcS3_mark_all_attached"));
+            }
+        }
     }
 
     //config functions
@@ -99,11 +117,20 @@ class tcS3 {
             "access_secret" => "",
             "delete_after_push" => 1,
             "s3_url" => "",
-            "local_url" => "http://{$_SERVER["HTTP_HOST"]}/wp-content/uploads",
-            "s3_cache_time" => 172800
+            "local_url" => "http://{$_SERVER["HTTP_HOST"]}/wp-content/",
+            "s3_cache_time" => 172800,
+            "s3_permalink_reset" => 0,
+            "s3_redirect_cache_time" => 86400,
+            "s3_redirect_cache_memcached" => ""
+
             );
 
-        add_option("tcS3_options", $options);
+        if(is_plugin_active_for_network("tcS3/tcS3.php")){
+            add_site_option("tcS3_options", $options);
+        } else{
+            add_option("tcS3_options", $options);   
+        }
+        
     }
 
     /**
@@ -118,7 +145,6 @@ class tcS3 {
     //upload a series of keys to S3
     public function push_to_s3($keys) {
         set_time_limit(120);
-        
         $errors = 0;
         foreach ($keys as $key) {
             $localFile = $this->uploads["basedir"] . "/" . $key;
@@ -226,32 +252,100 @@ class tcS3 {
     }
 
     //send image to browser
-
     public function load_image(){
-        global $wp_query; 
+        global $wp_query;
 
-        if ($wp_query->get('image_key')) {
-            $key = preg_replace("/[*]/", ".", rtrim($wp_query->get('image_key'), "/"));
+        if ($wp_query->get('file')) {
+            $key = preg_replace("/[*]/", ".", rtrim($wp_query->get('file'), "/"));
             $s3URL = $this->options["s3_url"];
             $localURLs = preg_split("/,\s*/", $this->options["local_url"]);
+            
+            if($url = $this->tcS3_redirect_cache($key)){ //if image URL is in cache
+                $this->tcS3_redirect_to_image($url);
+            }
 
             if($this->detect_image_by_header($s3URL . $key)){// if image is on S3
-                status_header(301);
-                header("Location: " . $s3URL . $key);
-                exit();
+                $url = $s3URL . $key;
+                $this->tcS3_redirect_cache($key, $url, "write");
+                $this->tcS3_redirect_to_image($url);
             }
 
             foreach($localURLs as $localURL){
-                if($this->detect_image_by_header($localURL . $key)){// if image is on S3
-                    status_header(301);
-                    header("Location: " . $localURL . $key);
-                    exit();
+                if($this->detect_image_by_header($localURL . $key)){// if image is on local
+                    $url = $localURL . $key;
+                    $this->tcS3_redirect_cache($key, $url, "write");
+                    $this->tcS3_redirect_to_image($url);
                 }
             }
 
             $wp_query->set_404();
             status_header(404);
         }
+    }
+
+    //remember when an image is on S3
+    public function tcS3_redirect_cache($key, $value = null, $action = "read"){
+        $cacheDirectory = dirname(__FILE__) . "/cache/";
+        $key = md5($key);
+        $redirect_cache_time = $this->options["s3_redirect_cache_time"];
+        $use_memcached = false;
+
+        if(class_exists("Memcached")){ //use memcached when possible and configured
+            $memcached = new Memcached();
+            $memcacheHosts = $this->options["s3_redirect_cache_memcached"];
+            $memcacheHosts = preg_split("/,\s*/", $memcacheHosts);
+            foreach($memcacheHosts as $host){
+                $host = explode(":", $host);
+                $servers[] = array($host[0], $host[1]);
+            }
+            $memcached->addServers($servers);
+
+            if($memcached->set("test", "1")){
+                $use_memcached = true; //if memcached is accessible
+            }
+        }
+       
+
+        if($redirect_cache_time > 0){ //if caching is enabled
+            switch($action){
+                case "read":
+                    if($use_memcached){
+                        return $memcached->get($key);
+                    }
+                    
+                    if(file_exists($cacheDirectory . $key) && (time() - filemtime($cacheDirectory . $key)) <= $redirect_cache_time){
+                        $url = file_get_contents($cacheDirectory . $key);
+                        return $url;
+                    }
+
+                    return false;
+                    break;
+
+                case "write":
+                    if($use_memcached){
+                        $memcached->set($key, $value, $redirect_cache_time);
+                    } else{
+                        file_put_contents($cacheDirectory . $key,  $value);
+                    }
+                    break;
+            }
+        } else{ //if caching is disabled
+            return false; 
+        }
+    }
+
+    public function tcS3_redirect_to_image($url){
+        status_header(301);
+        header("Location: " . $url);
+        exit();
+    }
+
+    public function tcS3_mark_all_attached(){
+        $ids =  $this->get_all_attachments();
+        foreach($ids as $id){
+            update_post_meta($id, "is_on_s3", 1);
+        }
+        update_option("tcS3_marked_all_attached", 1);
     }
 
     /*   * ***wordpress extensions***** */
@@ -308,9 +402,8 @@ class tcS3 {
     }
 
     public function push_single_to_S3( $actions, $post ) {
-
         $url = $this->pluginDir . "tcS3/tcS3-ajax.php?action=push_single&postID={$post->ID}";
-        $actions['regenerate_thumbnails'] = '<a class="push_single_to_S3" href="' . esc_url( $url ) . '" title="' . esc_attr("Send this file to S3") . '">' . "Send this file to S3" . '</a>';
+        $actions['push_to_s3'] = '<a class="push_single_to_S3" href="' . esc_url( $url ) . '" title="' . esc_attr("Send this file to S3") . '">' . "Send this file to S3" . '</a>';
 
         return $actions;
     }
@@ -340,14 +433,19 @@ class tcS3 {
     public function add_images_rewrite(){
         global $wp_rewrite;
 
-        add_rewrite_rule('^tcS3/(.+)$', 'index.php?image_key=$matches[1]', 'top');
-        add_rewrite_tag('%image_key%', '([^&]+)');
+        add_rewrite_rule('^tcS3_media/(.+)$', 'index.php?file=$matches[1]', 'top');
+        add_rewrite_tag('%file%', '([^&]+)');
+        
+        if(!get_option("tcS3_rewrite_flush")){
+            $wp_rewrite->flush_rules();
+            update_option("tcS3_rewrite_flush", 1);
+        }
     }
 
     public function build_attachment_url($url){
         preg_match("/\/([0-9]+\/[0-9]+\/[^\/]+)$/", $url, $matches);
         $protocol = (isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] != "") ? "https" : "http";
-        $url =  $protocol . "://" . $_SERVER["HTTP_HOST"] . "/tcS3" . $this->uploadDir . '/' . $matches[1];
+        $url =  $protocol . "://" . $_SERVER["HTTP_HOST"] . "/tcS3_media" . $this->uploadDir . '/' . $matches[1];
         return $url;
 
     }
@@ -357,6 +455,12 @@ class tcS3 {
     public function add_plugin_page() {
         add_options_page(
             'tcS3 Admin', 'tcS3 Admin configuration', 'manage_options', 'tcS3-admin', array($this, 'create_admin_page')
+            );
+    }
+
+    public function add_network_plugin_page() {
+        add_submenu_page(
+            'settings.php', 'tcS3 Admin', 'tcS3 Admin configuration', 'manage_options', 'tcS3-admin', array($this, 'create_admin_page')
             );
     }
 
@@ -375,7 +479,7 @@ class tcS3 {
         <div class="wrap">
             <?php screen_icon(); ?>
             <h2>tcS3 Settings</h2>           
-            <form method="post" action="options-general.php?page=tcS3-admin">
+            <form method="post" action="<?php echo $_SERVER["REQUEST_URI"]; ?>">
                 <?php
         // This prints out all hidden setting fields
                 settings_fields('tcS3_option_group');
@@ -446,19 +550,29 @@ class tcS3 {
 
         add_settings_field(
             's3_concurrent', 'S3 Concurrent Connections', array($this, 's3_concurrent_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
-            );
+        );
 
         add_settings_field(
             's3_min_part_size', 'S3 Minimum Part Size (MB)', array($this, 's3_min_part_size_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
-            );
+        );
 
         add_settings_field(
             's3_delete_local', 'Delete local file after upload', array($this, 's3_delete_local_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
-            );
+        );
 
         add_settings_field(
             's3_cache_time', 'Cache time for S3 objects', array($this, 's3_cache_time_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
+        );
+
+        add_settings_field(
+            's3_redirect_cache_time', 'Cache time for S3 object redirects', array($this, 's3_redirect_cache_time_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
+        );
+
+        if(class_exists("Memcached")){
+            add_settings_field(
+                's3_redirect_cache_memcached', 'Memcached host(s)', array($this, 's3_redirect_cache_memcached_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
             );
+        }
 
         add_settings_section(
                     'tcS3-migration', // ID
@@ -485,9 +599,9 @@ class tcS3 {
     public function print_section_info() {
         echo "<div class='postbox'><div class='inside'>Running nginx? You'll need to drop a custom rule into your configuration for images to load properly. Copy and paste the code below into your nginx configuration for this site";
         echo '<pre>
-        location ~*/tcS3/ {
+        location ~*/tcS3_media/ {
             if (!-e $request_filename) {
-                rewrite ^.*/tcS3/(.*)$ /index.php?image_key=$1 last;
+                rewrite ^.*/tcS3_media/(.*)$ /index.php?file=$1 last;
             }
         }
         </pre>
@@ -505,6 +619,7 @@ class tcS3 {
         <div class='progressbar-label'></div>
         </div>
         <input id='s3_sync' type='button' class='button sync' value='Sync' data-plugin-path='" . $this->pluginDir . "tcS3/' />
+        <input id='tcS3_mark_all_attached' type='button' class='button sync' value='Mark all synced to S3' data-plugin-path='" . $this->pluginDir . "tcS3/' />
         </div>
         ";
     }
@@ -627,7 +742,27 @@ class tcS3 {
             );
     }
 
+    public function s3_redirect_cache_time_callback() {
+        $optionKey = 's3_redirect_cache_time';
+        $helperText = 'How long should the redirect lookups be cached? This will improve response time in the file lookup. (Set this to 0 to disabled redirect lookup caching)';
+        
+        printf(
+            '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
+            );
+    }
+
+    public function s3_redirect_cache_memcached_callback() {
+        $optionKey = 's3_redirect_cache_memcached';
+        $helperText = 'A comma separated list of memcached servers (in hostname:port) format. Leave this blank to not use memcached.';
+        
+        printf(
+            '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
+            );
+    }
+
     public function save_s3_settings() {
+       $this->networkActivated = is_plugin_active_for_network("tcS3/tcS3.php");
+
        foreach ($_POST["tcS3_option"] as $key => $value) {
            if ($key == "bucket_path") {
                $options[$key] = "/" . trim($value, "/");
@@ -650,8 +785,12 @@ class tcS3 {
              }
              $options[$key] = trim(sanitize_text_field($value));
          }
-
-         update_option("tcS3_options", $options);
+         if($this->networkActivated){
+            update_site_option("tcS3_options", $options);
+         } else{
+             update_option("tcS3_options", $options);   
+         }
+         
      }
 
      public function array_to_options($arrays) {
