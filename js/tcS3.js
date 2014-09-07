@@ -14,19 +14,16 @@ var ajaxOutput;
 			e.preventDefault();
 			var row = $(this).closest("tr");
 			row.animate({opacity: .25}, 600);
-			console.log(row);
 
 			$.ajax({
 				url : $(this).attr("href"),
 				success : function(output){
-					console.log(output);
 					ajaxOutput = output;
 				},
 				error : function(a, b, c){
 					console.log("Error: "+c);
 				},
 				complete : function(){
-					console.log("Done!");
 					row.animate({opacity: 1}, 600);
 					if(typeof(ajaxOutput.success) != "undefined"){
 						row.find(".notuploaded").removeClass("active");
@@ -64,13 +61,11 @@ var ajaxOutput;
 			$.ajax({
 				url : plugin_url + "tcS3-ajax.php?action=mark_all_synced",
 				success : function(output){
-					console.log(output);
 				},
 				error : function(a, b, c){
 					console.log("Error: "+c);
 				},
 				complete : function(){
-					console.log("Done!");
 				}
 			});
 		});
