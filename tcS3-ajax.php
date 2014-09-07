@@ -4,8 +4,7 @@ require_once(dirname(__FILE__) . "/../../../wp-load.php");
 
 $tcS3 = new tcS3();
 
-
-
+$tcS3->require_login();
 
 switch($_GET["action"]){
 
@@ -34,4 +33,3 @@ switch($_GET["action"]){
 		break;
 }
 ?>
-

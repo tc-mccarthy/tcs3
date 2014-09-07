@@ -374,6 +374,17 @@ class tcS3 {
         update_option("tcS3_marked_all_attached", 1);
     }
 
+    public function require_login(){
+        if(!is_user_logged_in()){
+            $error = array(
+                "error" => array(
+                    "message" => "You must be logged in!"
+                )
+            );
+            die(json_encode($error));
+        }
+    }
+
     /*     * ***wordpress extensions***** */
 
     //function for creating new uploads on S3
