@@ -144,8 +144,8 @@ class tcS3 {
         $errors = 0;
 
         foreach ($keys as $key) {
-            $localFile = preg_replace("/[\/]+/", "/", $this->uploads["basedir"] . "/" . $key);
-            $remoteFile = preg_replace("/[\/]+/", "/", $this->options["bucket_path"] . "/" . $this->uploadDir . "/" . $key);
+            $localFile = $this->sanitize_s3_path($this->uploads["basedir"] . "/" . $key);
+            $remoteFile = $this->sanitize_s3_path($this->options["bucket_path"] . "/" . $this->uploadDir . "/" . $key);
 
             //if the file doesn't exist, skip it
             if (!file_exists($localFile)) {
@@ -185,7 +185,7 @@ class tcS3 {
     //function to delete object(s) from S3
     public function delete_from_S3($keys) {
         foreach ($keys as $key) {
-            $file = $this->options["bucket_path"] . "/" . $this->uploadDir . "/" . $key;
+            $file = $this->sanitize_s3_path($this->options["bucket_path"] . "/" . $this->uploadDir . "/" . $key);
             if ($this->s3Client->doesObjectExist($this->options["bucket"], $file)) {
                 $result = $this->s3Client->deleteObject(
                         array(
@@ -195,6 +195,12 @@ class tcS3 {
                 );
             }
         }
+    }
+
+    public function sanitize_s3_path($path){
+        $search = array("/[\/]+/");
+        $replace = array("/");
+        return preg_replace($search, $replace, $path);
     }
 
     //find the subdirectory from the filename
