@@ -784,6 +784,7 @@ class tcS3 {
             }
 
             if ($key == "s3_url" || $key == "local_url") {
+                unset($hosts);
                 $values = preg_split("/[,]+\s*/", $value);
 
                 foreach ($values as $value) {
