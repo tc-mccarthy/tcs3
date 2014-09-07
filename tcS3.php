@@ -8,7 +8,6 @@
  * Author URI: http://www.tc-mccarthy.com
  * License: GPL2
  */
-
 require(dirname(__FILE__) . "/aws/aws-autoloader.php");
 
 use Aws\Common\Aws;
@@ -25,7 +24,6 @@ class tcS3 {
     public $uploadDir;
     public $pluginDir;
     public $networkActivated;
-
 
     public function __construct() {
 
@@ -45,16 +43,16 @@ class tcS3 {
         $use_S3 = ($this->options["access_key"] != "" && $this->options["access_secret"] != "" && $this->options["bucket"] != "" && $this->options["bucket_path"] != "" && $this->options["bucket_region"] != "") ? true : false;
 
         //setup admin menu
-        if($this->networkActivated){
+        if ($this->networkActivated) {
             add_action('network_admin_menu', array($this, 'add_network_plugin_page'));
-        } else{
-            add_action('admin_menu', array($this, 'add_plugin_page'));    
+        } else {
+            add_action('admin_menu', array($this, 'add_plugin_page'));
         }
-        
+
         add_action('admin_init', array($this, 'page_init'));
         add_action('admin_init', array($this, 'enqueue_admin_scripts'));
 
-        if($use_S3){
+        if ($use_S3) {
             //send new uploads to S3
             add_filter('wp_generate_attachment_metadata', array($this, 'create_on_S3'));
 
@@ -69,7 +67,7 @@ class tcS3 {
             add_action('manage_media_custom_column', array($this, 'create_s3_media_column_content'), 10, 2);
 
             //add the push to S3 link to individual attachments
-            add_filter( 'media_row_actions', array( $this, 'push_single_to_S3' ), 10, 2 );
+            add_filter('media_row_actions', array($this, 'push_single_to_S3'), 10, 2);
 
             //set up aws
             $this->aws = Aws::factory($this->build_aws_config());
@@ -86,7 +84,7 @@ class tcS3 {
             add_filter('wp_get_attachment_url', array($this, 'build_attachment_url'));
 
             //if super admin has flagged marking all uploads as uploaded and it has been done on this site yet, do it.
-            if(get_site_option("tcS3_mark_all_attachments") == 1 && (get_option("tcS3_marked_all_attached") != 1 || get_option("tcS3_marked_all_attached") === FALSE)){
+            if (get_site_option("tcS3_mark_all_attachments") == 1 && (get_option("tcS3_marked_all_attached") != 1 || get_option("tcS3_marked_all_attached") === FALSE)) {
                 add_action("init", array($this, "tcS3_mark_all_attached"));
             }
         }
@@ -97,7 +95,7 @@ class tcS3 {
             'key' => $this->options["access_key"],
             'secret' => $this->options["access_secret"],
             'region' => $this->options["bucket_region"]
-            );
+        );
     }
 
     public function activate() {
@@ -116,15 +114,13 @@ class tcS3 {
             "s3_permalink_reset" => 0,
             "s3_redirect_cache_time" => 86400,
             "s3_redirect_cache_memcached" => ""
+        );
 
-            );
-
-        if($this->networkActivated){
+        if ($this->networkActivated) {
             add_site_option("tcS3_options", $options);
-        } else{
-            add_option("tcS3_options", $options);   
+        } else {
+            add_option("tcS3_options", $options);
         }
-        
     }
 
     /**
@@ -134,13 +130,13 @@ class tcS3 {
         // Do nothing
     }
 
-    public function network_activation_check(){
-        if ( ! function_exists( 'is_plugin_active_for_network' ) )
+    public function network_activation_check() {
+        if (!function_exists('is_plugin_active_for_network'))
             require_once( ABSPATH . '/wp-admin/includes/plugin.php' );
         return (is_plugin_active_for_network("tcS3/tcS3.php")) ? true : false;
     }
 
-    /******utility functions********/
+    /*     * ****utility functions******* */
 
     //upload a series of keys to S3
     public function push_to_s3($keys) {
@@ -158,15 +154,15 @@ class tcS3 {
 
             //build a multistream upload for the file
             $uploader = UploadBuilder::newInstance()
-            ->setClient($this->s3Client)
-            ->setSource($localFile)
-            ->setBucket($this->options["bucket"])
-            ->setKey($remoteFile)
-            ->setOption('ACL', 'public-read')
-            ->setOption('CacheControl', 'max-age='.$this->options["s3_cache_time"])
-            ->setConcurrency($this->options["concurrent_conn"])
-            ->setMinPartSize($this->options["min_part_size"] * 1024 * 1024)
-            ->build();
+                    ->setClient($this->s3Client)
+                    ->setSource($localFile)
+                    ->setBucket($this->options["bucket"])
+                    ->setKey($remoteFile)
+                    ->setOption('ACL', 'public-read')
+                    ->setOption('CacheControl', 'max-age=' . $this->options["s3_cache_time"])
+                    ->setConcurrency($this->options["concurrent_conn"])
+                    ->setMinPartSize($this->options["min_part_size"] * 1024 * 1024)
+                    ->build();
 
             try {
                 $upload = $uploader->upload();
@@ -192,11 +188,11 @@ class tcS3 {
             $file = $this->options["bucket_path"] . "/" . $this->uploadDir . "/" . $key;
             if ($this->s3Client->doesObjectExist($this->options["bucket"], $file)) {
                 $result = $this->s3Client->deleteObject(
-                    array(
-                        'Bucket' => $this->options["bucket"],
-                        'Key' => $file
+                        array(
+                            'Bucket' => $this->options["bucket"],
+                            'Key' => $file
                         )
-                    );
+                );
             }
         }
     }
@@ -228,13 +224,13 @@ class tcS3 {
     }
 
     //mark image as being on S3
-    public function mark_as_transferred($file_data){
+    public function mark_as_transferred($file_data) {
         global $wpdb;
         $post_id = $wpdb->get_var("SELECT post_id FROM $wpdb->postmeta WHERE meta_value = '{$file_data["file"]}' LIMIT 1");
         update_post_meta($post_id, "is_on_s3", 1);
     }
 
-    public function detect_image_by_header($url){
+    public function detect_image_by_header($url) {
         $curl = curl_init();
         curl_setopt_array($curl, array(
             CURLOPT_URL => $url,
@@ -244,7 +240,7 @@ class tcS3 {
 
         $check = explode("\n", curl_exec($curl));
         curl_close($curl);
-        
+
         $http_accepts = array(
             "HTTP/1.1 200 OK",
             "HTTP/1.1 201 Created",
@@ -270,32 +266,32 @@ class tcS3 {
 
         if (in_array(trim($check[0]), $http_accepts)) {
             return true;
-        } else{
+        } else {
             return false;
         }
     }
 
     //send image to browser
-    public function load_image(){
+    public function load_image() {
         global $wp_query;
 
         if ($wp_query->get('file')) {
             $key = preg_replace("/[*]/", ".", rtrim($wp_query->get('file'), "/"));
             $s3URL = $this->options["s3_url"];
-            $localURLs = preg_split("/,\s*/", $this->options["local_url"]);
-            
-            if($url = $this->tcS3_redirect_cache($key)){ //if image URL is in cache
+            $localURLs = preg_split("/[,]+\s*/", $this->options["local_url"]);
+
+            if ($url = $this->tcS3_redirect_cache($key)) { //if image URL is in cache
                 $this->tcS3_redirect_to_image($url);
             }
 
-            if($this->detect_image_by_header($s3URL . $key)){// if image is on S3
+            if ($this->detect_image_by_header($s3URL . $key)) {// if image is on S3
                 $url = $s3URL . $key;
                 $this->tcS3_redirect_cache($key, $url, "write");
                 $this->tcS3_redirect_to_image($url);
             }
 
-            foreach($localURLs as $localURL){
-                if($this->detect_image_by_header($localURL . $key)){// if image is on local
+            foreach ($localURLs as $localURL) {
+                if ($this->detect_image_by_header($localURL . $key)) {// if image is on local
                     $url = $localURL . $key;
                     $this->tcS3_redirect_cache($key, $url, "write");
                     $this->tcS3_redirect_to_image($url);
@@ -308,36 +304,36 @@ class tcS3 {
     }
 
     //remember when an image is on S3
-    public function tcS3_redirect_cache($key, $value = null, $action = "read"){
+    public function tcS3_redirect_cache($key, $value = null, $action = "read") {
         $cacheDirectory = dirname(__FILE__) . "/cache/";
         $key = md5($key);
         $redirect_cache_time = $this->options["s3_redirect_cache_time"];
         $use_memcached = false;
 
-        if(class_exists("Memcached")){ //use memcached when possible and configured
+        if (class_exists("Memcached")) { //use memcached when possible and configured
             $memcached = new Memcached();
             $memcacheHosts = $this->options["s3_redirect_cache_memcached"];
-            $memcacheHosts = preg_split("/,\s*/", $memcacheHosts);
-            foreach($memcacheHosts as $host){
+            $memcacheHosts = preg_split("/[,]+\s*/", $memcacheHosts);
+            foreach ($memcacheHosts as $host) {
                 $host = explode(":", $host);
                 $servers[] = array($host[0], $host[1]);
             }
             $memcached->addServers($servers);
 
-            if($memcached->set("test", "1")){
+            if ($memcached->set("test", "1")) {
                 $use_memcached = true; //if memcached is accessible
             }
         }
-       
 
-        if($redirect_cache_time > 0){ //if caching is enabled
-            switch($action){
+
+        if ($redirect_cache_time > 0) { //if caching is enabled
+            switch ($action) {
                 case "read":
-                    if($use_memcached){
+                    if ($use_memcached) {
                         return $memcached->get($key);
                     }
-                    
-                    if(file_exists($cacheDirectory . $key) && (time() - filemtime($cacheDirectory . $key)) <= $redirect_cache_time){
+
+                    if (file_exists($cacheDirectory . $key) && (time() - filemtime($cacheDirectory . $key)) <= $redirect_cache_time) {
                         $url = file_get_contents($cacheDirectory . $key);
                         return $url;
                     }
@@ -346,38 +342,38 @@ class tcS3 {
                     break;
 
                 case "write":
-                    if($use_memcached){
+                    if ($use_memcached) {
                         $memcached->set($key, $value, $redirect_cache_time);
-                    } else{
-                        file_put_contents($cacheDirectory . $key,  $value);
+                    } else {
+                        file_put_contents($cacheDirectory . $key, $value);
                     }
                     break;
             }
-        } else{ //if caching is disabled
-            return false; 
+        } else { //if caching is disabled
+            return false;
         }
     }
 
-    public function tcS3_redirect_to_image($url){
+    public function tcS3_redirect_to_image($url) {
         status_header(301);
         header("Location: " . $url);
         exit();
     }
 
-    public function tcS3_mark_all_attached(){
-        $ids =  $this->get_all_attachments();
-        foreach($ids as $id){
+    public function tcS3_mark_all_attached() {
+        $ids = $this->get_all_attachments();
+        foreach ($ids as $id) {
             update_post_meta($id, "is_on_s3", 1);
         }
         update_option("tcS3_marked_all_attached", 1);
     }
 
-    /*   * ***wordpress extensions***** */
+    /*     * ***wordpress extensions***** */
 
     //function for creating new uploads on S3
     public function create_on_S3($file_data) {
         $keys = $this->build_attachment_keys($file_data);
-        if($this->push_to_s3($keys)){
+        if ($this->push_to_s3($keys)) {
             $this->mark_as_transferred($file_data);
         }
 
@@ -387,7 +383,7 @@ class tcS3 {
     //send updated images to S3 after image editor is used
     public function update_on_s3($file_data, $post_id) {
         $keys = $this->build_attachment_keys($file_data);
-        if($this->push_to_s3($keys)){
+        if ($this->push_to_s3($keys)) {
             $this->mark_as_transferred($file_data);
         }
 
@@ -401,38 +397,38 @@ class tcS3 {
     }
 
     //set up the additional column in the media library to indicate whether an image is on S3 or not
-    public function create_s3_media_column($defaults){
+    public function create_s3_media_column($defaults) {
         $defaults["s3"] = 'S3';
         return $defaults;
     }
 
-    public function create_s3_media_column_content($column_name, $post_ID){
-        switch($column_name){
+    public function create_s3_media_column_content($column_name, $post_ID) {
+        switch ($column_name) {
             case 's3':
-            $is_on_s3 = get_post_meta($post_ID, 'is_on_s3', true);
-            if($is_on_s3 == 1){
-                $uploadedClasses = 'uploaded active';
-                $notUploadedClasses = 'notuploaded';
-            } else{
-                $uploadedClasses = 'uploaded';
-                $notUploadedClasses = 'notuploaded active';
-            }
+                $is_on_s3 = get_post_meta($post_ID, 'is_on_s3', true);
+                if ($is_on_s3 == 1) {
+                    $uploadedClasses = 'uploaded active';
+                    $notUploadedClasses = 'notuploaded';
+                } else {
+                    $uploadedClasses = 'uploaded';
+                    $notUploadedClasses = 'notuploaded active';
+                }
 
-            echo "<img class='{$uploadedClasses}' src='" . plugin_dir_url(__FILE__) . "img/s3-logo.png' />";
-            echo "<img class='{$notUploadedClasses}' src='" . plugin_dir_url(__FILE__) . "img/s3-logo-bw.png' />";
+                echo "<img class='{$uploadedClasses}' src='" . plugin_dir_url(__FILE__) . "img/s3-logo.png' />";
+                echo "<img class='{$notUploadedClasses}' src='" . plugin_dir_url(__FILE__) . "img/s3-logo-bw.png' />";
 
-            break;
+                break;
         }
     }
 
-    public function push_single_to_S3( $actions, $post ) {
+    public function push_single_to_S3($actions, $post) {
         $url = $this->pluginDir . "tcS3/tcS3-ajax.php?action=push_single&postID={$post->ID}";
-        $actions['push_to_s3'] = '<a class="push_single_to_S3" href="' . esc_url( $url ) . '" title="' . esc_attr("Send this file to S3") . '">' . "Send this file to S3" . '</a>';
+        $actions['push_to_s3'] = '<a class="push_single_to_S3" href="' . esc_url($url) . '" title="' . esc_attr("Send this file to S3") . '">' . "Send this file to S3" . '</a>';
 
         return $actions;
     }
 
-    public function get_all_attachments($skip_synced = true){
+    public function get_all_attachments($skip_synced = true) {
         global $wpdb;
 
         $whereClause = ($skip_synced) ? "AND b.post_id IS NULL" : "";
@@ -447,55 +443,53 @@ class tcS3 {
             ORDER BY ID DESC
             ");
 
-        foreach($attachments as $id){
+        foreach ($attachments as $id) {
             $ids[] = intval($id->ID);
         }
 
         return $ids;
     }
 
-    public function add_images_rewrite(){
+    public function add_images_rewrite() {
         global $wp_rewrite;
 
         add_rewrite_rule('^tcS3_media/(.+)$', 'index.php?file=$matches[1]', 'top');
         add_rewrite_tag('%file%', '([^&]+)');
-        
-        if(!get_option("tcS3_rewrite_flush")){
+
+        if (!get_option("tcS3_rewrite_flush")) {
             $wp_rewrite->flush_rules();
             update_option("tcS3_rewrite_flush", 1);
         }
     }
 
-    public function build_attachment_url($url){
+    public function build_attachment_url($url) {
         preg_match("/\/([0-9]+\/[0-9]+\/[^\/]+)$/", $url, $matches);
         $protocol = (isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] != "") ? "https" : "http";
-        $url =  $protocol . "://" . $_SERVER["HTTP_HOST"] . "/tcS3_media" . $this->uploadDir . '/' . $matches[1];
+        $url = $protocol . "://" . $_SERVER["HTTP_HOST"] . "/tcS3_media" . $this->uploadDir . '/' . $matches[1];
         return $url;
-
     }
 
-    /***** admin interface *****/
+    /*     * *** admin interface **** */
 
     public function add_plugin_page() {
         add_options_page(
-            'tcS3 Admin', 'tcS3 Admin configuration', 'manage_options', 'tcS3-admin', array($this, 'create_admin_page')
-            );
+                'tcS3 Admin', 'tcS3 Admin configuration', 'manage_options', 'tcS3-admin', array($this, 'create_admin_page')
+        );
     }
 
     public function add_network_plugin_page() {
         add_submenu_page(
-            'settings.php', 'tcS3 Admin', 'tcS3 Admin configuration', 'manage_options', 'tcS3-admin', array($this, 'create_admin_page')
-            );
+                'settings.php', 'tcS3 Admin', 'tcS3 Admin configuration', 'manage_options', 'tcS3-admin', array($this, 'create_admin_page')
+        );
     }
 
-    public function enqueue_admin_scripts(){
+    public function enqueue_admin_scripts() {
 
         wp_enqueue_script("jquery");
-        wp_enqueue_script( 'jquery-ui-progressbar');  // the progress bar
+        wp_enqueue_script('jquery-ui-progressbar');  // the progress bar
         wp_enqueue_script("tcS3", $this->pluginDir . "tcS3/js/tcS3.js");
         wp_enqueue_style("jquery-ui", "//ajax.googleapis.com/ajax/libs/jqueryui/1.11.1/themes/smoothness/jquery-ui.css");
         wp_enqueue_style("tcS3", $this->pluginDir . "tcS3/css/tcS3.css");
-
     }
 
     public function create_admin_page() {
@@ -505,7 +499,7 @@ class tcS3 {
             <h2>tcS3 Settings</h2>           
             <form method="post" action="<?php echo $_SERVER["REQUEST_URI"]; ?>">
                 <?php
-        // This prints out all hidden setting fields
+                // This prints out all hidden setting fields
                 settings_fields('tcS3_option_group');
                 do_settings_sections('tcS3-setting-admin');
                 submit_button();
@@ -517,95 +511,93 @@ class tcS3 {
 
     public function page_init() {
         register_setting(
-                    'tcS3_option_group', // Option group
-                    'tcS3-settings', // Option name
-                    array($this, 'sanitize') // Sanitize
-                    );
+                'tcS3_option_group', // Option group
+                'tcS3-settings', // Option name
+                array($this, 'sanitize') // Sanitize
+        );
 
         //primary config
         add_settings_section(
-                    'tcS3-settings', // ID
-                    'tcS3 Configuration Parameters', // Title
-                    array($this, 'print_section_info'), // Callback
-                    'tcS3-setting-admin' // Page
-                    );
+                'tcS3-settings', // ID
+                'tcS3 Configuration Parameters', // Title
+                array($this, 'print_section_info'), // Callback
+                'tcS3-setting-admin' // Page
+        );
 
         add_settings_field(
-                    'aws_key', // ID
-                    'AWS Key', // Title 
-                    array($this, 'aws_key_callback'), // Callback
-                    'tcS3-setting-admin', // Page
-                    'tcS3-settings' // Section           
-                    );
+                'aws_key', // ID
+                'AWS Key', // Title 
+                array($this, 'aws_key_callback'), // Callback
+                'tcS3-setting-admin', // Page
+                'tcS3-settings' // Section           
+        );
 
         add_settings_field(
-            'aws_secret', 'AWS Secret', array($this, 'aws_secret_callback'), 'tcS3-setting-admin', 'tcS3-settings'
-            );
+                'aws_secret', 'AWS Secret', array($this, 'aws_secret_callback'), 'tcS3-setting-admin', 'tcS3-settings'
+        );
 
         add_settings_field(
-            's3_bucket', 'S3 Bucket', array($this, 's3_bucket_callback'), 'tcS3-setting-admin', 'tcS3-settings'
-            );
+                's3_bucket', 'S3 Bucket', array($this, 's3_bucket_callback'), 'tcS3-setting-admin', 'tcS3-settings'
+        );
 
         add_settings_field(
-            's3_bucket_path', 'S3 Bucket Path', array($this, 's3_bucket_path_callback'), 'tcS3-setting-admin', 'tcS3-settings'
-            );
+                's3_bucket_path', 'S3 Bucket Path', array($this, 's3_bucket_path_callback'), 'tcS3-setting-admin', 'tcS3-settings'
+        );
 
         add_settings_field(
-            's3_url', 'Local URL', array($this, 'local_url_callback'), 'tcS3-setting-admin', 'tcS3-settings'
-            );
+                's3_url', 'Local URL', array($this, 'local_url_callback'), 'tcS3-setting-admin', 'tcS3-settings'
+        );
 
         add_settings_field(
-            'local_url', 'S3 URL', array($this, 's3_url_callback'), 'tcS3-setting-admin', 'tcS3-settings'
-            );
+                'local_url', 'S3 URL', array($this, 's3_url_callback'), 'tcS3-setting-admin', 'tcS3-settings'
+        );
 
         add_settings_field(
-            's3_bucket_region', 'S3 Bucket Region', array($this, 's3_bucket_region_callback'), 'tcS3-setting-admin', 'tcS3-settings'
-            );
+                's3_bucket_region', 'S3 Bucket Region', array($this, 's3_bucket_region_callback'), 'tcS3-setting-admin', 'tcS3-settings'
+        );
 
 
         //advanced settings
 
         add_settings_section(
-                    'tcS3-advanced-settings', // ID
-                    'tcS3 Advanced Configuration', // Title
-                    array($this, 'print_advanced_section_warning'), // Callback
-                    'tcS3-setting-admin' // Page
-                    );
-
-        add_settings_field(
-            's3_concurrent', 'S3 Concurrent Connections', array($this, 's3_concurrent_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
+                'tcS3-advanced-settings', // ID
+                'tcS3 Advanced Configuration', // Title
+                array($this, 'print_advanced_section_warning'), // Callback
+                'tcS3-setting-admin' // Page
         );
 
         add_settings_field(
-            's3_min_part_size', 'S3 Minimum Part Size (MB)', array($this, 's3_min_part_size_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
+                's3_concurrent', 'S3 Concurrent Connections', array($this, 's3_concurrent_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
         );
 
         add_settings_field(
-            's3_delete_local', 'Delete local file after upload', array($this, 's3_delete_local_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
+                's3_min_part_size', 'S3 Minimum Part Size (MB)', array($this, 's3_min_part_size_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
         );
 
         add_settings_field(
-            's3_cache_time', 'Cache time for S3 objects', array($this, 's3_cache_time_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
+                's3_delete_local', 'Delete local file after upload', array($this, 's3_delete_local_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
         );
 
         add_settings_field(
-            's3_redirect_cache_time', 'Cache time for S3 object redirects', array($this, 's3_redirect_cache_time_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
+                's3_cache_time', 'Cache time for S3 objects', array($this, 's3_cache_time_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
         );
 
-        if(class_exists("Memcached")){
+        add_settings_field(
+                's3_redirect_cache_time', 'Cache time for S3 object redirects', array($this, 's3_redirect_cache_time_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
+        );
+
+        if (class_exists("Memcached")) {
             add_settings_field(
-                's3_redirect_cache_memcached', 'Memcached host(s)', array($this, 's3_redirect_cache_memcached_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
+                    's3_redirect_cache_memcached', 'Memcached host(s)', array($this, 's3_redirect_cache_memcached_callback'), 'tcS3-setting-admin', 'tcS3-advanced-settings'
             );
         }
 
         add_settings_section(
-                    'tcS3-migration', // ID
-                    'tcS3 Migration Tools', // Title
-                    array($this, 'migration_output'), // Callback
-                    'tcS3-setting-admin' // Page
-                    );
-
-
+                'tcS3-migration', // ID
+                'tcS3 Migration Tools', // Title
+                array($this, 'migration_output'), // Callback
+                'tcS3-setting-admin' // Page
+        );
     }
 
     public function sanitize($input) {
@@ -653,8 +645,8 @@ class tcS3 {
         $helperText = 'We recommend you create an AWS IAM user just for S3 and use its key. If your blog is every exploited, this method will prevent hackers from doing too much damage to your AWS account if they get their hands on your keys.';
 
         printf(
-            '<input type="hidden" name="tcS3_option_submit" value="1" /><input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
-            );
+                '<input type="hidden" name="tcS3_option_submit" value="1" /><input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
+        );
     }
 
     public function aws_secret_callback() {
@@ -662,8 +654,8 @@ class tcS3 {
         $helperText = 'We recommend you create an AWS IAM user just for S3 and use its secret. If your blog is every exploited, this method will prevent hackers from doing too much damage to your AWS account if they get their hands on your secrets.';
 
         printf(
-            '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
-            );
+                '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
+        );
     }
 
     public function s3_bucket_callback() {
@@ -671,8 +663,8 @@ class tcS3 {
         $helperText = 'The name of your S3 bucket';
 
         printf(
-            '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
-            );
+                '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
+        );
     }
 
     public function s3_bucket_path_callback() {
@@ -680,8 +672,8 @@ class tcS3 {
         $helperText = 'The path within your S3 bucket that Wordpress should use as your "uploads" directory';
 
         printf(
-            '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
-            );
+                '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
+        );
     }
 
     public function s3_url_callback() {
@@ -689,8 +681,8 @@ class tcS3 {
         $helperText = 'The URL (including http://) to your S3 bucket and directory where uploads are being stored (e.g. http://mybucket.s3.amazonaws.com/uploads)';
 
         printf(
-            '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
-            );
+                '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
+        );
     }
 
     public function local_url_callback() {
@@ -698,8 +690,8 @@ class tcS3 {
         $helperText = 'The URL or URLs (comma separated) and path to where your local uploads file (e.g. http://www.example.com/wp-content/uploads would be http://www.example.com/wp-content/). This will be used as a fallback should the sync process fail for any upload so that your images always display.';
 
         printf(
-            '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
-            );
+                '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
+        );
     }
 
     public function s3_bucket_region_callback() {
@@ -712,7 +704,7 @@ class tcS3 {
             array("value" => "us-east-1", "display" => "us-east-1", "options" => ""),
             array("value" => "us-west-1", "display" => "us-west-1", "options" => ""),
             array("value" => "us-west-2", "display" => "us-west-2", "options" => "")
-            );
+        );
 
         foreach ($regions as $key => $region) {
             if ($region["value"] == $this->options["bucket_region"]) {
@@ -724,8 +716,8 @@ class tcS3 {
         $helperText = 'What region is your S3 bucket in?';
 
         printf(
-            '<select id="%s" name="tcS3_option[%s]" />%s</select><div><small>%s</small></div>', $optionKey, $optionKey, $this->array_to_options($regions), $helperText
-            );
+                '<select id="%s" name="tcS3_option[%s]" />%s</select><div><small>%s</small></div>', $optionKey, $optionKey, $this->array_to_options($regions), $helperText
+        );
     }
 
     public function s3_concurrent_callback() {
@@ -733,8 +725,8 @@ class tcS3 {
         $helperText = 'How many concurrent connections should the server make on upload to S3? (Default: 10)';
 
         printf(
-            '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
-            );
+                '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
+        );
     }
 
     public function s3_min_part_size_callback() {
@@ -742,8 +734,8 @@ class tcS3 {
         $helperText = 'What size chunks should Wordpress break the file up into on S3 upload (in MB)? (Default: 5)';
 
         printf(
-            '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
-            );
+                '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
+        );
     }
 
     public function s3_delete_local_callback() {
@@ -751,72 +743,70 @@ class tcS3 {
         $helperText = 'Should uploaded files be removed from your local server?';
 
         printf(
-            '<input type="radio" id="%s" name="tcS3_option[%s]" value="1" %s /> Yes 
+                '<input type="radio" id="%s" name="tcS3_option[%s]" value="1" %s /> Yes 
             <br /><input type="radio" id="%s" name="tcS3_option[%s]" value="0" %s /> No 
             <div><small>%s</small></div>', $optionKey, $optionKey, ($this->options[$optionKey] == 1) ? "checked" : "", $optionKey, $optionKey, ($this->options[$optionKey] == 0) ? "checked" : "", $helperText
-            );
+        );
     }
 
     public function s3_cache_time_callback() {
         $optionKey = 's3_cache_time';
         $helperText = 'How long (in seconds) should the cache headers be set for on S3 objects? (This will help keep your S3 bill down and improve page load for returning visitors)';
-        
+
         printf(
-            '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
-            );
+                '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
+        );
     }
 
     public function s3_redirect_cache_time_callback() {
         $optionKey = 's3_redirect_cache_time';
         $helperText = 'How long should the redirect lookups be cached? This will improve response time in the file lookup. (Set this to 0 to disabled redirect lookup caching)';
-        
+
         printf(
-            '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
-            );
+                '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
+        );
     }
 
     public function s3_redirect_cache_memcached_callback() {
         $optionKey = 's3_redirect_cache_memcached';
         $helperText = 'A comma separated list of memcached servers (in hostname:port) format. Leave this blank to not use memcached.';
-        
+
         printf(
-            '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
-            );
+                '<input type="text" id="%s" name="tcS3_option[%s]" value="%s" /><div><small>%s</small></div>', $optionKey, $optionKey, isset($this->options[$optionKey]) ? esc_attr($this->options[$optionKey]) : '', $helperText
+        );
     }
 
     public function save_s3_settings() {
-       foreach ($_POST["tcS3_option"] as $key => $value) {
-           if ($key == "bucket_path") {
-               $options[$key] = "/" . trim($value, "/");
-               continue;
-           }
+        foreach ($_POST["tcS3_option"] as $key => $value) {
+            if ($key == "bucket_path") {
+                $options[$key] = "/" . trim($value, "/");
+                continue;
+            }
 
-           if($key == "s3_url" || $key == "local_url"){
-             $values = preg_split("/,\s*/", $value);
+            if ($key == "s3_url" || $key == "local_url") {
+                $values = preg_split("/[,]+\s*/", $value);
 
-             foreach($values as $value){
-                 $protocol_check = preg_match("/^https?:\/\//", $value, $matches);
+                foreach ($values as $value) {
+                    $protocol_check = preg_match("/^https?:\/\//", $value, $matches);
+                    if ($protocol_check == 0) { //if protocol wasn't included
+                        $value = "http://" . $value;
+                    }
+                    $hosts[] = rtrim(trim($value), "/") . "/";
+                }
+                $options[$key] = implode(",",$hosts);
+                continue;
+            }
+            $options[$key] = trim(sanitize_text_field($value));
+        }
 
-                         if($protocol_check == 0){ //if protocol wasn't included
-                         $value = "http://".$value;
-                     }
-
-                     $options[$key] = rtrim(trim($value), "/") . "/";
-                 }  
-                 continue;
-             }
-             $options[$key] = trim(sanitize_text_field($value));
-         }
-
-         if($this->network_activation_check()){
+        if ($this->network_activation_check()) {
             update_site_option("tcS3_options", $options);
-         } else{
-             update_option("tcS3_options", $options);   
-         }
-         
-     }
+        } else {
+            update_option("tcS3_options", $options);
+        }
+    }
 
-     public function array_to_options($arrays) {
+    public function array_to_options($arrays) {
         foreach ($arrays as $option) {
             $option = (object) $option;
             $options[] = "<option value = '{$option->value}' {$option->options}>{$option->display}</option>";
