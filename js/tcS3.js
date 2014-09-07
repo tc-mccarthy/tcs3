@@ -42,6 +42,21 @@
 				}
 			});
 		});
-		
+
+		$("input#tcS3_mark_all_attached").click(function(){
+			var plugin_url = $(this).data("plugin-path");
+			$.ajax({
+				url : plugin_url + "tcS3-ajax.php?action=mark_all_synced",
+				success : function(output){
+					console.log(output);
+				},
+				error : function(a, b, c){
+					console.log("Error: "+c);
+				},
+				complete : function(){
+					console.log("Done!");
+				}
+			});
+		});
 	});
 })(jQuery);

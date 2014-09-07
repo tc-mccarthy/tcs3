@@ -28,8 +28,10 @@ switch($_GET["action"]){
 		$full_sync = ($_GET["full_sync"] == 1 || !isset($_GET["full_sync"])) ? true : false;
 		echo json_encode($tcS3->get_all_attachments($full_sync));
 		break;
+
+	case "mark_all_synced":
+		echo update_site_option("tcS3_mark_all_attachments", 1);
+		break;
 }
-
-
 ?>
 

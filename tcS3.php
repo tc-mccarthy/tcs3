@@ -88,6 +88,12 @@ class tcS3 {
             add_action('init', array($this, 'add_images_rewrite'), 10, 0);
             add_action('template_redirect', array($this, 'load_image'));
             add_filter('wp_get_attachment_url', array($this, 'build_attachment_url'));
+
+            //if super admin has flagged marking all uploads as uploaded and it has been done on this site yet, do it.
+            if(get_site_option("tcS3_mark_all_attachments") == 1 && (get_option("tcS3_marked_all_attached") != 1 || get_option("tcS3_marked_all_attached") === FALSE)){
+                $this->dump_to_log("Inside function");
+                add_action("init", array($this, "tcS3_mark_all_attached"));
+            }
         }
     }
 
@@ -334,6 +340,14 @@ class tcS3 {
         exit();
     }
 
+    public function tcS3_mark_all_attached(){
+        $ids =  $this->get_all_attachments();
+        foreach($ids as $id){
+            update_post_meta($id, "is_on_s3", 1);
+        }
+        update_option("tcS3_marked_all_attached", 1);
+    }
+
     /*   * ***wordpress extensions***** */
 
     //function for creating new uploads on S3
@@ -388,7 +402,6 @@ class tcS3 {
     }
 
     public function push_single_to_S3( $actions, $post ) {
-        $this->dump_to_log($actions);
         $url = $this->pluginDir . "tcS3/tcS3-ajax.php?action=push_single&postID={$post->ID}";
         $actions['push_to_s3'] = '<a class="push_single_to_S3" href="' . esc_url( $url ) . '" title="' . esc_attr("Send this file to S3") . '">' . "Send this file to S3" . '</a>';
 
@@ -606,6 +619,7 @@ class tcS3 {
         <div class='progressbar-label'></div>
         </div>
         <input id='s3_sync' type='button' class='button sync' value='Sync' data-plugin-path='" . $this->pluginDir . "tcS3/' />
+        <input id='tcS3_mark_all_attached' type='button' class='button sync' value='Mark all synced to S3' data-plugin-path='" . $this->pluginDir . "tcS3/' />
         </div>
         ";
     }
