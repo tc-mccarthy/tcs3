@@ -26,9 +26,7 @@ class tcS3 {
     public $pluginDir;
     public $networkActivated;
 
-    /**
-     * Construct the plugin object
-     */
+
     public function __construct() {
 
         $this->pluginDir = @plugin_dir_url();
@@ -95,7 +93,6 @@ class tcS3 {
         }
     }
 
-    //config functions
     public function build_aws_config() {
         return array(
             'key' => $this->options["access_key"],
