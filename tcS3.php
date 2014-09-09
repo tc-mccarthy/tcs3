@@ -87,6 +87,11 @@ class tcS3 {
             if (get_site_option("tcS3_mark_all_attachments") == 1 && (get_option("tcS3_marked_all_attached") != 1 || get_option("tcS3_marked_all_attached") === FALSE)) {
                 add_action("init", array($this, "tcS3_mark_all_attached"));
             }
+
+            //enable ajax requests
+            add_action("wp_ajax_push_single", array($this, "tcS3_ajax_push_single"));
+            add_action("wp_ajax_get_attachment_ids", array($this, "tcS3_ajax_get_attachment_ids"));
+            add_action("wp_ajax_mark_all_synced", array($this, "tcS3_ajax_mark_all_synced"));
         }
     }
 
@@ -439,9 +444,7 @@ class tcS3 {
     }
 
     public function push_single_to_S3($actions, $post) {
-        $url = $this->pluginDir . "tcS3/tcS3-ajax.php?action=push_single&postID={$post->ID}";
-        $actions['push_to_s3'] = '<a class="push_single_to_S3" href="' . esc_url($url) . '" title="' . esc_attr("Send this file to S3") . '">' . "Send this file to S3" . '</a>';
-
+        $actions['push_to_s3'] = '<a class="push_single_to_S3" data-postID="' . $post->ID . '" title="' . esc_attr("Send this file to S3") . '">' . "Send this file to S3" . '</a>';
         return $actions;
     }
 
@@ -484,6 +487,34 @@ class tcS3 {
         $protocol = (isset($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] != "") ? "https" : "http";
         $url = $protocol . "://" . $_SERVER["HTTP_HOST"] . "/tcS3_media" . $this->uploadDir . '/' . $matches[1];
         return $url;
+    }
+
+    /**** AJAX REQUESTS ******/
+    public function tcS3_ajax_push_single(){
+        $post_id = $_POST["postID"];
+        $file_data = wp_get_attachment_metadata($post_id);
+        $keys = $this->build_attachment_keys($file_data);
+
+        if($this->push_to_S3($keys)){
+            $results = array("success" => array("message" => "File successfully pushed to S3"));
+            update_post_meta($post_id, "is_on_s3", 1);
+        } else{
+            $results = array("error" => array("message" => "Could not send to S3"));
+        }
+
+        echo json_encode($results);
+        die;
+    }
+
+    public function tcS3_ajax_get_attachment_ids(){
+        $full_sync = ($_POST["full_sync"] == 1) ? true : false;
+        echo json_encode($this->get_all_attachments($full_sync));
+        die;
+    }
+
+    public function tcS3_ajax_mark_all_synced(){
+        update_site_option("tcS3_mark_all_attachments", 1);
+        die;
     }
 
     /*     * *** admin interface **** */
