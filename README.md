@@ -26,7 +26,7 @@ The plugin's use of the AWS SDK for PHP allows for a more flexible configuration
 </ol>
 
 <h3>Install</h3>
-This plugin is installed just like any other. Simple upload the zip file you can download from <a href="https://github.com/tc-mccarthy/tcS3">github</a> and upload it using the WordPress dashboard or FTP. This plugin has been submitted to the Wordpress team for review as well and will hopefully be available in the Wordpress plugin repository soon.
+This plugin is installed just like any other. Simply upload the zip file you can download from <a href="https://github.com/tc-mccarthy/tcS3">github</a> and upload it using the WordPress dashboard or FTP. This plugin has been submitted to the Wordpress team for review as well and will hopefully be available in the Wordpress plugin repository soon.
 
 <h3>Unsolicited advice</h3>
 While S3 is relatively inexpensive (very inexpensive the more you use it), it's not free and it's not just how much you upload to it, but how much traffic you're getting. If your bucket is receiving a lot of GET requests (which happens when you have a lot of traffic on your site) it could get expensive (take a look at <a href="http://aws.amazon.com/s3/pricing/">Amazon's S3 pricing</a> guide). The cache headers being assigned by this plugin will certainly help, but if you sign up for a <a href="http://www.cloudflare.com">free Cloudflare account</a> and set up your <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html">S3 bucket as a subdomain</a> that Cloudflare is caching, responses to initial requests will come from S3, but many subsequent requests will hit Cloudflare and cost you nothing (and images will load faster because Cloudflare is a CDN).
