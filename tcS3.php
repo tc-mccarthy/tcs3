@@ -517,6 +517,10 @@ class tcS3 {
 	public function tcS3_ajax_push_single(){
 		$post_id = $_POST["postID"];
 		$file_data = wp_get_attachment_metadata($post_id);
+		if(count($file_data) > 0){
+			$file_data["file"] = get_attached_file($post_id);
+		}
+		
 		$keys = $this->build_attachment_keys($file_data);
 
 		if($this->push_to_S3($keys)){
