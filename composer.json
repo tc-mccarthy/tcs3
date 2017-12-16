@@ -1,0 +1,13 @@
+{
+    "require": {
+        "aws/aws-sdk-php": "^3.48"
+    },
+
+    "autoload": {
+        "files": [
+            "inc/base.class.php",
+            "inc/aws_ops.class.php",
+            "inc/wp_media.class.php"
+        ]
+    }
+}
