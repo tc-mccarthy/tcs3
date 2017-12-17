@@ -10,11 +10,16 @@ class tcs3_wp_media
 
         $this->uploadDir = wp_upload_dir();
 
-        //hooks
+        //sending to s3
         add_action('add_attachment', [$this, 'upload_handler'], 20, 1); //for all uploads
         add_filter('wp_generate_attachment_metadata', [$this, 'image_upload_handler'], 20, 2); //for images
         add_filter('wp_update_attachment_metadata', [$this, 'image_upload_handler'], 20, 2);
         add_action("delete_attachment", [$this, "delete_handler"], 20, 1);
+
+        //modifying URLs
+        add_filter('wp_get_attachment_url', [$this, 'url_handler'], 20, 1);
+        add_filter('wp_get_attachment_image_src', [$this, 'get_attachment_image_src'], 20, 1);
+        add_filter('wp_calculate_image_srcset', [$this, 'calculate_image_srcset'], 20, 1);
     }
 
     public function upload_handler($post_id)
@@ -65,5 +70,35 @@ class tcs3_wp_media
                 $tcS3->aws_ops_->s3_delete($key);
             }
         }
+    }
+
+    public function url_handler($url)
+    {
+        $uploadDir = str_replace($this->options["local_path"], "", $this->uploadDir["path"]);
+        $uploadDir = preg_replace("/\/\d{4}\/\d{2}/", "", $uploadDir);
+
+        preg_match("/(\/\d{4}\/\d{2}\/.+$)/", $url, $matches);
+
+        $s3_path = preg_replace(["/[\/]+/", "/^\//"], ["/", ""], $uploadDir . "/" . $matches[1]);
+
+        $url = $this->options["s3_url"] . $s3_path;
+
+
+        return $url;
+    }
+
+    public function get_attachment_image_src($image)
+    {
+        $image["src"] = $this->url_handler($image[0]);
+        return $image;
+    }
+
+    public function calculate_image_srcset($sources)
+    {
+        foreach ($sources as $key => $source) {
+            $sources[$key]['url'] = $this->url_handler($source['url']);
+        }
+        
+        return $sources;
     }
 }
