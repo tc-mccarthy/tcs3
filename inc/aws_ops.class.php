@@ -30,16 +30,17 @@ class tcs3_aws_ops
     {
         $success = true;
         $uploader = new MultipartUploader($this->s3, $localFile, [
-                'bucket' => $this->options["bucket"],
-                'key'    => $this->s3Client->encodeKey($remoteFile),
-                'concurrency' => $this->options["concurrent_conn"],
-                'part_size' => $this->options["min_part_size"] * 1024 * 1024,
-                'acl' => 'public-read',
-                'before_initiate' => function (\Aws\Command $command) {
-                    // $command is a CreateMultipartUpload operation
-                    $command['CacheControl'] = 'max-age=' . $this->options["s3_cache_time"];
-                }
-            ]);
+            'bucket' => $this->options["bucket"],
+            'key'    => $this->s3->encodeKey($remoteFile),
+            'concurrency' => $this->options["concurrent_conn"],
+            'part_size' => $this->options["min_part_size"] * 1024 * 1024,
+            'acl' => 'public-read',
+            'before_initiate' => function (\Aws\Command $command) {
+                // $command is a CreateMultipartUpload operation
+                $command['CacheControl'] = 'max-age=' . $this->options["s3_cache_time"];
+            }
+        ]);
+
         try {
             $result = $uploader->upload();
         } catch (MultipartUploadException $e) {
@@ -53,7 +54,7 @@ class tcs3_aws_ops
     public function s3_delete($file)
     {
         if ($this->s3->doesObjectExist($this->options["bucket"], $file)) {
-            $result = $this->s3Client->deleteObject([
+            $result = $this->s3->deleteObject([
                 'Bucket' => $this->options["bucket"],
                 'Key' => $file
             ]);
@@ -66,11 +67,12 @@ class tcs3_aws_ops
 
     public function build_attachment_key($path)
     {
-        preg_match("/(\d{4}\/\d{2}\/.+)$/", $path, $matches);
+        $key = str_replace($this->options["local_path"], "", $path);
 
-        error_log(WP_CONTENT);
+        $key = $this->options["bucket_path"] . "/" . $key;
 
-        $key = $this->uploadDir . $matches[1];
-        error_log($key);
+        $key = preg_replace(["/^\//", "/[\/]+/"], ["", "/"], $key);
+
+        return $key;
     }
 }
