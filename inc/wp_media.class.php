@@ -26,7 +26,6 @@ class tcs3_wp_media
     {
         global $tcS3;
 
-        $type = get_post_mime_type($post_id);
         $file = get_attached_file($post_id);
 
         $key = $tcS3->aws_ops_->build_attachment_key($file);
@@ -35,6 +34,8 @@ class tcs3_wp_media
         if ($upload) {
             update_post_meta($post_id, "is_on_s3", 1);
         }
+
+        return $upload;
     }
 
     public function image_upload_handler($file_data, $post_id)
@@ -59,17 +60,23 @@ class tcs3_wp_media
         $key = $tcS3->aws_ops_->build_attachment_key($file);
         $tcS3->aws_ops_->s3_delete($key);
 
-        $path = str_replace($this->options["local_path"], "", $file);
-        $path = preg_replace(["/[^\/]+\..+$/", "/^\//"], ["", ""], $path);
+        $path = $this->get_path_from_file($file);
 
         if (isset($file_data["sizes"])) {
             foreach ($file_data["sizes"] as $size => $details) {
                 $file = $path . "/" . $details["file"];
                 $key = $tcS3->aws_ops_->build_attachment_key($file);
-                error_log(json_encode(["file" => $key]));
                 $tcS3->aws_ops_->s3_delete($key);
             }
         }
+    }
+
+    public function get_path_from_file($file)
+    {
+        $path = str_replace($this->options["local_path"], "", $file);
+        $path = preg_replace(["/[^\/]+\..+$/", "/^\//"], ["", ""], $path);
+
+        return $path;
     }
 
     public function url_handler($url)
@@ -98,7 +105,19 @@ class tcs3_wp_media
         foreach ($sources as $key => $source) {
             $sources[$key]['url'] = $this->url_handler($source['url']);
         }
-        
+
         return $sources;
+    }
+
+    public function get_all_uploads()
+    {
+        global $wpdb;
+        $attachments = $wpdb->get_results("SELECT post_id FROM {$wpdb->posts} p WHERE post_type = 'attachment'");
+
+        $attachments = array_map(function ($o) {
+            return $o->post_id;
+        }, $attachments);
+
+        return $attachments;
     }
 }

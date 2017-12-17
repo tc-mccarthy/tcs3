@@ -15,6 +15,7 @@ class ComposerStaticInit9e839e6d49eec8c2c47f5e6910590b51
         '8c7cc67220b14a2da217afa78c7bdd83' => __DIR__ . '/../..' . '/inc/base.class.php',
         '168e36bf15e9412e64c3afc77f5e2410' => __DIR__ . '/../..' . '/inc/aws_ops.class.php',
         '71201bca6fe68397d170175966de72bc' => __DIR__ . '/../..' . '/inc/wp_media.class.php',
+        '1fcbca7b8480fc877d72f366415aa9e0' => __DIR__ . '/../..' . '/inc/wp_ajax.class.php',
     );
 
     public static $prefixLengthsPsr4 = array (

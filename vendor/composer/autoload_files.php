@@ -14,4 +14,5 @@ return array(
     '8c7cc67220b14a2da217afa78c7bdd83' => $baseDir . '/inc/base.class.php',
     '168e36bf15e9412e64c3afc77f5e2410' => $baseDir . '/inc/aws_ops.class.php',
     '71201bca6fe68397d170175966de72bc' => $baseDir . '/inc/wp_media.class.php',
+    '1fcbca7b8480fc877d72f366415aa9e0' => $baseDir . '/inc/wp_ajax.class.php',
 );
