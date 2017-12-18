@@ -12,10 +12,12 @@ class ComposerStaticInit9e839e6d49eec8c2c47f5e6910590b51
         'b067bc7112e384b61c701452d53a14a8' => __DIR__ . '/..' . '/mtdowling/jmespath.php/src/JmesPath.php',
         '37a3dc5111fe8f707ab4c132ef1dbc62' => __DIR__ . '/..' . '/guzzlehttp/guzzle/src/functions_include.php',
         '8a9dc1de0ca7e01f3e08231539562f61' => __DIR__ . '/..' . '/aws/aws-sdk-php/src/functions.php',
+        '2a44a8dd24b90f4d5e01079096889f26' => __DIR__ . '/../..' . '/inc/titan-framework/titan-framework-embedder.php',
         '8c7cc67220b14a2da217afa78c7bdd83' => __DIR__ . '/../..' . '/inc/base.class.php',
         '168e36bf15e9412e64c3afc77f5e2410' => __DIR__ . '/../..' . '/inc/aws_ops.class.php',
         '71201bca6fe68397d170175966de72bc' => __DIR__ . '/../..' . '/inc/wp_media.class.php',
         '1fcbca7b8480fc877d72f366415aa9e0' => __DIR__ . '/../..' . '/inc/wp_ajax.class.php',
+        'a2179ab0a950cd41b8e61bc90c6b4d61' => __DIR__ . '/../..' . '/inc/wp_options.class.php',
     );
 
     public static $prefixLengthsPsr4 = array (

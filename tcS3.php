@@ -16,7 +16,7 @@
  {
      public function __construct()
      {
-         add_action("init", [$this, "init"], 20);
+         add_action("after_setup_theme", [$this, "init"], 20);
          // $this->init();
      }
 
@@ -25,6 +25,7 @@
          $this->base_ = new tcs3_base();
          $this->aws_ops_ = new tcs3_aws_ops($this->base_->options);
          $this->wp_media_ = new tcs3_wp_media($this->base_->options);
+         $this->wp_options_ = new tcs3_wp_options($this->base_->options);
      }
  }
 
