@@ -1,9 +1,11 @@
 <?php
 
+/* THIS CLASS IS A HACK TO ADD NETWORK SUPPORT TO Titan*/
+
 if (! defined('ABSPATH')) {
     exit; // Exit if accessed directly
 }
-class TitanFrameworkAdminPage
+class TitanFrameworkNetworkPage
 {
     private $defaultSettings = array(
         'name' => '', // Name of the menu item
@@ -73,7 +75,7 @@ class TitanFrameworkAdminPage
             $priority = intval($this->settings['position']);
         }
 
-        add_action('admin_menu', array( $this, 'register' ), $priority);
+        add_action('network_admin_menu', array( $this, 'register' ), $priority);
     }
 
     public function createAdminPanel($settings)
@@ -283,7 +285,7 @@ class TitanFrameworkAdminPage
         }
 
         $screen = get_current_screen();
-        if ($screen->id != $this->panelID) {
+        if ($screen->id != $this->panelID . "-network") {
             return false;
         }
 

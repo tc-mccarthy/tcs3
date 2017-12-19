@@ -13,6 +13,7 @@ class ComposerStaticInit9e839e6d49eec8c2c47f5e6910590b51
         '37a3dc5111fe8f707ab4c132ef1dbc62' => __DIR__ . '/..' . '/guzzlehttp/guzzle/src/functions_include.php',
         '8a9dc1de0ca7e01f3e08231539562f61' => __DIR__ . '/..' . '/aws/aws-sdk-php/src/functions.php',
         '2a44a8dd24b90f4d5e01079096889f26' => __DIR__ . '/../..' . '/inc/titan-framework/titan-framework-embedder.php',
+        '9057e1c4ecddbb72f42b24003bdf653d' => __DIR__ . '/../..' . '/inc/titan_network_admin.class.php',
         '8c7cc67220b14a2da217afa78c7bdd83' => __DIR__ . '/../..' . '/inc/base.class.php',
         '168e36bf15e9412e64c3afc77f5e2410' => __DIR__ . '/../..' . '/inc/aws_ops.class.php',
         '71201bca6fe68397d170175966de72bc' => __DIR__ . '/../..' . '/inc/wp_media.class.php',
