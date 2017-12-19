@@ -7,8 +7,11 @@ class tcs3_base
 {
     public function __construct()
     {
+        global $tcS3;
+
         $this->network_activated = $this->network_activation_check();
         $this->build_options();
+        $this->migrate();
     }
 
     public function network_activation_check()
@@ -71,5 +74,29 @@ class tcs3_base
         }
 
         return $str;
+    }
+
+    public function migrate()
+    {
+        if ($this->network_activation_check()) {
+            $version = get_site_option("tcS3_version");
+        } else {
+            $version = get_option("tcS3_version");
+        }
+
+        $this->v = (!$version) ? 0 : floatval($version);
+
+        // MIGRATION TO VERSION 2.0
+        if ($this->v < 2) {
+            if ($this->network_activation_check()) {
+                // move network settings to primary site
+                switch_to_blog(1);
+                update_option("tcS3_network_options", get_site_option("tcS3_options"));
+                restore_current_blog();
+                update_site_option("tcS3_version", "2.0");
+            } else {
+                update_option("tcS3_version", "2.0");
+            }
+        }
     }
 }
