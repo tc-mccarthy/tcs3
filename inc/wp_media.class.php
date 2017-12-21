@@ -35,6 +35,10 @@ class tcs3_wp_media
             update_post_meta($post_id, "is_on_s3", 1);
         }
 
+        if ($this->options["s3_delete_local"] == 1) {
+            unset($file);
+        }
+
         return $upload;
     }
 
@@ -112,12 +116,26 @@ class tcs3_wp_media
     public function get_all_uploads()
     {
         global $wpdb;
-        $attachments = $wpdb->get_results("SELECT post_id FROM {$wpdb->posts} p WHERE post_type = 'attachment'");
+        $attachments = $wpdb->get_results("SELECT ID FROM {$wpdb->posts} p WHERE post_type = 'attachment'");
 
         $attachments = array_map(function ($o) {
-            return $o->post_id;
+            return $o->ID;
         }, $attachments);
 
         return $attachments;
+    }
+
+    public function s3_sync_count()
+    {
+        global $wpdb;
+        $query = "SELECT count(*) as num FROM {$wpdb->posts} p JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND meta_key = 'is_on_s3' AND meta_value = '1' WHERE post_type = 'attachment'";
+        return intval($wpdb->get_var($query));
+    }
+
+    public function attachment_count()
+    {
+        global $wpdb;
+        $query = "SELECT count(*) as num FROM {$wpdb->posts} WHERE post_type = 'attachment'";
+        return intval($wpdb->get_var($query));
     }
 }

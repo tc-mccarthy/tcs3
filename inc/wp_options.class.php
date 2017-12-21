@@ -42,6 +42,8 @@ class tcs3_wp_options
 
     public function setFields()
     {
+        global $tcS3;
+
         $this->fields = [
         [  //creds tab
           "name" => "Authentication",
@@ -207,7 +209,38 @@ class tcs3_wp_options
                 'type' => 'save'
               ]
             ] //end s3 config fields
-          ] //end s3 config tab
+          ], //end s3 config tab
+          [  //Advanced config tab
+            "name" => "Sync",
+            "desc" => "",
+            "id" => "sync",
+            "fields" => [  //creds field
+                [
+                  'name' => '&nbsp;',
+                  'type' => 'custom',
+                  'custom' => sprintf("<div>%d of your %d uploads have been synced to S3</div>", $tcS3->wp_media_->s3_sync_count(), $tcS3->wp_media_->attachment_count())
+                ],
+                [
+                  'name' => 'Mark all synced',
+                  'type' => 'ajax-button',
+                  'id' => 'mark-all-synced',
+                  'desc' => "If you sent your existing images to S3 before activating this plugin you can mark them all as synced here",
+                  "action" => "mark_all_synced",
+                  "label" => "Update",
+                  "class" => "button-primary"
+                ],
+                [
+                  'name' => 'Sync all',
+                  'type' => 'ajax-button',
+                  'id' => 'sync-all',
+                  'desc' => "This will push all of your existing uploads to S3. This process can be resource intensive so if you have a lot of uploads we recommend you upload them a different way",
+                  "action" => "sync_all",
+                  "label" => "Sync",
+                  "class" => "button-primary"
+                ]
+
+              ] //end s3 sync fields
+            ] //end s3 sync tab
       ];
     }
 

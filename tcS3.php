@@ -26,6 +26,7 @@
          $this->aws_ops_ = new tcs3_aws_ops($this->base_->options);
          $this->wp_media_ = new tcs3_wp_media($this->base_->options);
          $this->wp_options_ = new tcs3_wp_options($this->base_->options);
+         $this->wp_ajax_ = new tcs3_ajax();
      }
  }
 

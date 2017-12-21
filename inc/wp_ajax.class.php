@@ -29,7 +29,7 @@ class tcs3_ajax
         global $tcS3;
 
         $attachments = $tcS3->wp_media_->get_all_uploads();
-        $response = ["success" => [], "error" => []];
+        $response = ["success" => [], "error" => [], "message" => "Done!"];
 
 
         foreach ($attachments as $post_id) {
@@ -59,8 +59,7 @@ class tcs3_ajax
             }
         }
 
-        echo json_encode($response);
-        exit();
+        wp_send_json_success($response);
     }
 
     public function mark_all_synced()
@@ -68,9 +67,16 @@ class tcs3_ajax
         global $tcS3;
 
         $attachments = $tcS3->wp_media_->get_all_uploads();
+        $success = true;
 
         foreach ($attachments as $post_id) {
-            update_post_meta($post_id, "is_on_s3", 1);
+            $result = update_post_meta($post_id, "is_on_s3", 1);
+        }
+
+        if ($success) {
+            wp_send_json_success(__('Done!', 'default'));
+        } else {
+            wp_send_json_error(__('Failed!', 'default'));
         }
     }
 
