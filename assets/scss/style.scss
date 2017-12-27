@@ -1,0 +1,16 @@
+/*
+	All the styles for my project
+*/
+@import "_normalize";
+@import "_vars";
+@import "_mixins";
+@import "_layout";
+@import "_base";
+@import "_mobile";
+
+@media (min-width:$mobileBP) and (max-width:$desktopBP) {
+	@import "_tablet";
+}
+@media (min-width:$desktopBP) {
+	@import "_desktop";
+}

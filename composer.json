@@ -1,0 +1,17 @@
+{
+    "require": {
+        "aws/aws-sdk-php": "^3.48"
+    },
+
+    "autoload": {
+        "files": [
+            "inc/titan-framework/titan-framework-embedder.php",
+            "inc/titan_network_admin.class.php",
+            "inc/base.class.php",
+            "inc/aws_ops.class.php",
+            "inc/wp_media.class.php",
+            "inc/wp_ajax.class.php",
+            "inc/wp_options.class.php"
+        ]
+    }
+}
