@@ -218,11 +218,11 @@ class tcs3_wp_options
               ]
             ] //end s3 config fields
           ], //end s3 config tab
-          [  //Advanced config tab
-            "name" => "Sync",
+          [  //Operations tab
+            "name" => "Operations",
             "desc" => "",
-            "id" => "sync",
-            "fields" => [  //creds field
+            "id" => "ops",
+            "fields" => [  //operations fields
                 [
                   'name' => '&nbsp;',
                   'type' => 'custom',
@@ -245,10 +245,19 @@ class tcs3_wp_options
                   "action" => "sync_all",
                   "label" => "Sync",
                   "class" => "button-primary"
+                ],
+                [
+                  'name' => 'Regenerate all thumbnails',
+                  'type' => 'ajax-button',
+                  'id' => 'regenerate-all',
+                  'desc' => "This will regenerate all image derivatives",
+                  "action" => "regenerate_all_thumbnails",
+                  "label" => "Regenerate",
+                  "class" => "button-primary"
                 ]
 
-              ] //end s3 sync fields
-            ] //end s3 sync tab
+              ] //end s3 operations fields
+            ] //end s3 operations tab
       ];
     }
 
