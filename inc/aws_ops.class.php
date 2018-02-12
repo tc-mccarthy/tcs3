@@ -71,7 +71,7 @@ class tcs3_aws_ops
 
         $key = $this->options["bucket_path"] . "/" . $key;
 
-        $key = preg_replace(["/^\//", "/[\/]+/"], ["", "/"], $key);
+        $key = preg_replace(["/[\/]+/", "/^\//"], ["/", ""], trim($key));
 
         return $key;
     }
