@@ -39,6 +39,11 @@ While S3 is relatively inexpensive (very inexpensive the more you use it), it's 
 This plugin is installed just like any other. Simply upload the zip file you can download from GitHub and upload it using the WordPress dashboard or FTP. You can also install it right from the Wordpress Plugin Repository!
 
 == Changelog ==
+= 2.0.1 =
+* Fixes network activation bug
+* Fixes issue with uploading to bucket root
+
+
 = 2.0.0 =
 * Redesigns options page
 * Allows for instance override of network config in WPMU
