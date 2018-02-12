@@ -17,7 +17,6 @@
      public function __construct()
      {
          add_action("after_setup_theme", [$this, "init"], 20);
-         // $this->init();
      }
 
      public function init()
