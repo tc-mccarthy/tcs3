@@ -30,7 +30,7 @@ class tcs3_base
           "access_key_variable" => "",
           "access_secret_variable" => "",
           "bucket" => "",
-          "bucket_path" => "",
+          "bucket_path" => "/",
           "local_path" => WP_CONTENT_DIR,
           "local_url" => WP_CONTENT_URL,
           "s3_url" => "",

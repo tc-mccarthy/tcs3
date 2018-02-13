@@ -3,7 +3,7 @@ Contributors: tcmccarthy1
 Tags: Amazon, S3, upload, media, multisite, aws
 Requires at least: 3.5
 Tested up to: 4.9.1
-Stable tag: 2.0.0
+Stable tag: 2.1.0
 License: GPL, version 2
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,6 +39,12 @@ While S3 is relatively inexpensive (very inexpensive the more you use it), it's 
 This plugin is installed just like any other. Simply upload the zip file you can download from GitHub and upload it using the WordPress dashboard or FTP. You can also install it right from the Wordpress Plugin Repository!
 
 == Changelog ==
+= 2.1.0 =
+* Improves language on the configuration page
+* Adds some validation to the configuration page
+* Fixes bug that prevents images from being deleted after push to S3
+* Moves JS to ES6
+
 = 2.0.1 =
 * Fixes network activation bug
 * Fixes issue with uploading to bucket root

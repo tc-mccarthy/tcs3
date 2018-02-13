@@ -26,7 +26,32 @@ module.exports = function (grunt) {
 		concat: {
 			dist: {
 				src: ['assets/js/*.js'],
-				dest: 'js/app.js',
+				dest: 'js/working/app.es6.js',
+			}
+		},
+
+		babel: {
+			options: {
+				presets: [
+					["env", {
+						"targets": {
+							"browsers": ["last 2 versions", "safari >= 7"]
+						}
+					}]
+				]
+			},
+			dist: {
+				//dest - string: src - array
+				src: ["js/working/app.es6.js"],
+				dest: "js/working/app.babel.js"
+			}
+		},
+
+		browserify: {
+			dist: {
+				files: {
+					'js/app.js': ['js/working/app.babel.js']
+				}
 			}
 		},
 
@@ -45,7 +70,7 @@ module.exports = function (grunt) {
 		watch: {
 			js: {
 				files: ['assets/js/*.js', 'assets/js/*/*.js', 'Gruntfile.js'],
-				tasks: ['newer:jshint', 'newer:concat', 'newer:uglify']
+				tasks: ['newer:jshint', 'newer:concat', 'babel', 'browserify', 'newer:uglify']
 			},
 
 			css: {
@@ -61,9 +86,10 @@ module.exports = function (grunt) {
 				browser: true,
 				expr: true,
 				globals: {
-					jQuery: true
+					jQuery: true,
 				},
-				sub: true
+				sub: true,
+				esversion: 6
 
 			},
 			uses_defaults: ['assets/js/*.js', '!assets/js/__*.js', 'assets/js/*/*.js', '!assets/js/*/__*.js']
@@ -83,7 +109,7 @@ module.exports = function (grunt) {
 
 	// register at least this one task
 	// register at least this one task
-	grunt.registerTask('default', ['concat', 'removelogging', 'uglify', 'compass', 'cssmin']);
-	grunt.registerTask('dev', ['jshint', 'concat', 'uglify', 'compass', 'cssmin', 'watch']);
+	grunt.registerTask('default', ['concat', 'babel', 'browserify', 'removelogging', 'uglify', 'compass', 'cssmin']);
+	grunt.registerTask('dev', ['jshint', 'concat', 'babel', 'browserify', 'uglify', 'compass', 'cssmin', 'watch']);
 	grunt.registerTask('des', ['compass', 'cssmin', 'watch:css']);
 };

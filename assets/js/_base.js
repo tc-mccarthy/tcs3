@@ -1,33 +1,64 @@
-var app = {
-    ele: {},
-    init: function() {
-        var _this = this;
-        $(_this.onReady.bind(_this));
-        $(window).scroll(_this.onScroll.bind(_this));
-        $(window).resize(_this.onResize.bind(_this));
-        $(window).load(_this.onLoad.bind(_this));
-    },
+import "babel-polyfill";
+import "jquery-browserify";
 
-    onReady: function() {
-        var _this = this;
-        this.binds();
-    },
+var tcs3 = {
+	ele: {},
+	init: function () {
 
-    onLoad: function() {
-        var _this = this;
-    },
+		$((e) => {
+			this.onReady(e);
+		});
 
-    onScroll: function() {
-        var _this = this;
-    },
+		$("window").on({
+			scroll: (e) => { this.onScroll(e); },
+			resize: (e) => { this.onResize(e); },
+			load: (e) => { this.onLoad(e); }
+		});
+	},
 
-    onResize: function() {
-        var _this = this;
-    },
+	onReady: function () {
+		var _this = this;
+		this.binds();
+		console.log("READY!");
+	},
 
-    binds: function() {
-        var _this = this;
-    }
+	onLoad: function () {
+		var _this = this;
+	},
+
+	onScroll: function () {
+		var _this = this;
+	},
+
+	onResize: function () {
+		var _this = this;
+	},
+
+	binds: function () {
+		var _this = this;
+
+		$("#tcs3_network_bucket_path").on("blur", function (e) {
+			var ele = $(this),
+				value = ele.val().replace(/^[\/]+/, "");
+
+			console.log("Updating path");
+
+			if (!value || value == "") {
+				value = "/";
+			}
+
+			ele.val(value);
+		});
+
+		$("#tcs3_network_s3_url").on("blur", function (e) {
+			var ele = $(this),
+				value = ele.val().replace(/[\/]+$/, "") + "/";
+
+			console.log("Updating URL");
+
+			ele.val(value);
+		});
+	}
 };
 
-app.init();
+tcs3.init();

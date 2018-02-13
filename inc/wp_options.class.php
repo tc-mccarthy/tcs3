@@ -62,27 +62,27 @@ class tcs3_wp_options
             [
               "name" => "&nbsp;",
               "type" => "custom",
-              "custom" => "<div><strong>We recommend you set up IAM keys specifically for tcS3 and limit the scope of the permissions. This will protect your AWS account should these keys fall into unwanted hands.</strong></div>"
+              "custom" => "<div><strong>We recommend you <a href='https://console.aws.amazon.com/iam/home' target='_blank'>set up IAM keys</a> specifically for tcS3 and limit the scope of the permissions. This will protect your AWS account should these keys fall into unwanted hands.</strong></div>"
             ],
             //no default values for access_key and access_secret so we don't unintentionally reveal the values of env vars
             [
-              'name' => 'AWS Key',
+              'name' => 'Access key ID',
               'id' => 'access_key',
               'type' => 'text',
-              'desc' => 'We recommend you create an AWS IAM user just for S3 and use its key. If your blog is every exploited, this method will prevent hackers from doing too much damage to your AWS account if they get their hands on your keys.',
+              'desc' => 'We recommend you <a href="https://console.aws.amazon.com/iam/home" target="_blank">set up IAM keys</a> just for S3 and use its key. If your blog is every exploited, this method will prevent hackers from doing too much damage to your AWS account if they get their hands on your keys.',
             ],
             [
-              'name' => 'AWS Secret',
+              'name' => 'Access secret',
               'id' => 'access_secret',
               'type' => 'text',
-              'desc' => 'We recommend you create an AWS IAM user just for S3 and use its secret. If your blog is every exploited, this method will prevent hackers from doing too much damage to your AWS account if they get their hands on your secrets.',
+              'desc' => 'We recommend you <a href="https://console.aws.amazon.com/iam/home" target="_blank">set up IAM keys</a> just for S3 and use its key. If your blog is every exploited, this method will prevent hackers from doing too much damage to your AWS account if they get their hands on your keys.',
             ],
             [
               "name" => "Or Environment Variables",
               "type" => "heading",
             ],
             [
-              'name' => 'AWS Access Key environment variable',
+              'name' => 'Access key ID environment variable',
               'id' => 'access_key_variable',
               'type' => 'text',
               'desc' => 'For security reasons, you may prefer to store your AWS key and secret in an environment variable instead of your DB. If that is your preference enter the name of the env variable for your key.',
@@ -90,7 +90,7 @@ class tcs3_wp_options
 
             ],
             [
-              'name' => 'AWS Access Key Secret environment variable',
+              'name' => 'Access secret environment variable',
               'id' => 'access_secret_variable',
               'type' => 'text',
               'desc' => 'For security reasons, you may prefer to store your AWS key and secret in an environment variable instead of your DB. If that is your preference enter the name of the env variable for your secret.',
@@ -124,7 +124,7 @@ class tcs3_wp_options
               'name' => 'S3 URL',
               'id' => 's3_url',
               'type' => 'text',
-              'desc' => 'The URL (including http(s)://) to your S3 bucket and directory where uploads are being stored (e.g. http://mybucket.s3.amazonaws.com/uploads)',
+              'desc' => 'The URL (including http(s)://) to your S3 bucket and directory where uploads are being stored. Unless you\'re doing something special, the format is usually http://%BUCKET_NAME%.s3.amazonaws.com/%BUCKET_PATH%/uploads',
               "default" => $this->options["s3_url"]
             ],
             [
@@ -178,7 +178,7 @@ class tcs3_wp_options
                 'name' => 'URL to uploads directory parent',
                 'id' => 'local_url',
                 'type' => 'text',
-                'desc' => 'What is the absolute URL to your server\'s upload directory parent (usually wp-content)?',
+                'desc' => 'What is the absolute URL to your server\'s upload directory parent (usually wp-content)? We use this to figure out how to rewrite your asset URLs.',
                 "default" => $this->options["local_url"]
               ],
               [

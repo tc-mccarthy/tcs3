@@ -50,6 +50,10 @@ class tcs3_wp_media
             $file = $this->uploadDir["path"] . "/" . $details["file"];
             $key = $tcS3->aws_ops_->build_attachment_key($file);
             $upload = $tcS3->aws_ops_->s3_upload($file, $key);
+
+            if ($this->options["s3_delete_local"] == 1) {
+                unset($file);
+            }
         }
 
         return $file_data;
