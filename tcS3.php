@@ -3,7 +3,7 @@
  * Plugin Name: tcS3 -- Send uploads directly to S3
  * Plugin URI: https://mccarthydigitalconsulting.com
  * Description: Allows site admins to push uploads to S3
- * Version: 2.0.1
+ * Version: 2.1.1
  * Author: TC McCarthy, McCarthy Digital Consulting
  * Author URI: https://mccarthydigitalconsulting.com
  * License: GPL2
@@ -31,6 +31,7 @@
 
      public function scripts()
      {
+         wp_enqueue_script("jquery");
          wp_enqueue_script("tcs3", plugin_dir_url(__FILE__) . "js/app.min.js");
      }
  }
