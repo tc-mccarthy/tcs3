@@ -16,14 +16,19 @@ class tcs3_aws_ops
 
     public function build_aws_config()
     {
-        return [
-            'region' => $this->options["bucket_region"],
-            "version" => "2006-03-01",
-            "credentials" => [
-                'key' => $this->options["access_key"],
-                'secret' => $this->options["access_secret"]
-            ]
+        $config = [
+            'region' => $this->options['bucket_region'],
+            'version' => '2006-03-01'
         ];
+
+        if (!empty($this->options['access_key']) && !empty($this->options['access_secret'])) {
+            $config['credentials'] = [
+                'key' => $this->options['access_key'],
+                'secret' => $this->options['access_secret']
+            ];
+        }
+
+        return $config;
     }
 
     public function s3_upload($localFile, $remoteFile)
@@ -36,14 +41,14 @@ class tcs3_aws_ops
         }
 
         $uploader = new MultipartUploader($this->s3, $localFile, [
-            'bucket' => $this->options["bucket"],
+            'bucket' => $this->options['bucket'],
             'key'    => $this->s3->encodeKey($remoteFile),
-            'concurrency' => $this->options["concurrent_conn"],
-            'part_size' => $this->options["min_part_size"] * 1024 * 1024,
+            'concurrency' => $this->options['concurrent_conn'],
+            'part_size' => $this->options['min_part_size'] * 1024 * 1024,
             'acl' => 'public-read',
             'before_initiate' => function (\Aws\Command $command) {
                 // $command is a CreateMultipartUpload operation
-                $command['CacheControl'] = 'max-age=' . $this->options["s3_cache_time"];
+                $command['CacheControl'] = 'max-age=' . $this->options['s3_cache_time'];
             }
         ]);
 
@@ -59,9 +64,9 @@ class tcs3_aws_ops
 
     public function s3_delete($file)
     {
-        if ($this->s3->doesObjectExist($this->options["bucket"], $file)) {
+        if ($this->s3->doesObjectExist($this->options['bucket'], $file)) {
             $result = $this->s3->deleteObject([
-                'Bucket' => $this->options["bucket"],
+                'Bucket' => $this->options['bucket'],
                 'Key' => $file
             ]);
         } else {
@@ -73,11 +78,11 @@ class tcs3_aws_ops
 
     public function build_attachment_key($path)
     {
-        $key = str_replace($this->options["local_path"], "", $path);
+        $key = str_replace($this->options['local_path'], '', $path);
 
-        $key = $this->options["bucket_path"] . "/" . $key;
+        $key = $this->options['bucket_path'] . '/' . $key;
 
-        $key = preg_replace(["/[\/]+/", "/^\//"], ["/", ""], trim($key));
+        $key = preg_replace(["/[\/]+/", "/^\//"], ['/', ''], trim($key));
 
         return $key;
     }
