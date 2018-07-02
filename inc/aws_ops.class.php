@@ -16,19 +16,25 @@ class tcs3_aws_ops
 
     public function build_aws_config()
     {
-        return [
-            'region' => $this->options["bucket_region"],
-            "version" => "2006-03-01",
-            "credentials" => [
-                'key' => $this->options["access_key"],
-                'secret' => $this->options["access_secret"]
-            ]
+        $config = [
+            'region' => $this->options['bucket_region'],
+            'version' => '2006-03-01'
         ];
+
+        if (!empty($this->options['access_key']) && !empty($this->options['access_secret'])) {
+            $config['credentials'] = [
+                'key' => $this->options["access_key"],
+                        'secret' => $this->options["access_secret"]
+            ];
+        }
+
+        return $config;
     }
 
     public function s3_upload($localFile, $remoteFile)
     {
         $success = true;
+
         $uploader = new MultipartUploader($this->s3, $localFile, [
             'bucket' => $this->options["bucket"],
             'key'    => $this->s3->encodeKey($remoteFile),
