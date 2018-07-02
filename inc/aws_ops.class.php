@@ -35,6 +35,11 @@ class tcs3_aws_ops
     {
         $success = true;
 
+        if (!file_exists($localFile)) {
+            error_log(sprintf("%s doesn't exist", $localFile));
+            return false;
+        }
+
         $uploader = new MultipartUploader($this->s3, $localFile, [
             'bucket' => $this->options['bucket'],
             'key'    => $this->s3->encodeKey($remoteFile),

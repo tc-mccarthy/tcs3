@@ -211,13 +211,13 @@ class TitanFrameworkOptionAjaxButton extends TitanFrameworkOption {
 						}
 						$(this).text( successMessage );
 
-						// Call the error callback
+						this.doingAjax = false;
+						// Call the success callback
 						if ( $(this).attr('data-success-callback') != '' ) {
 							if ( typeof window[ $(this).attr('data-success-callback') ] != 'undefined' ) {
 								window[ $(this).attr('data-success-callback') ]( data );
 							}
 						}
-						this.doingAjax = false;
 
 					}.bind(this),
 
