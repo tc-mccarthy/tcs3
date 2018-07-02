@@ -244,7 +244,9 @@ class tcs3_wp_options
                   'desc' => "This will push all of your existing uploads to S3. This process can be resource intensive so if you have a lot of uploads we recommend you upload them a different way",
                   "action" => "sync_all",
                   "label" => "Sync",
-                  "class" => "button-primary"
+                  "class" => "button-primary",
+                  "success_callback" => "sync_all_callback",
+                  "data_filter_callback" => "sync_all_filter"
                 ]
 
               ] //end s3 sync fields
@@ -262,3 +264,24 @@ class tcs3_wp_options
         update_site_option("tcS3_options", $network_options);
     }
 }
+
+
+add_action('admin_footer', function() {
+    ?>
+    <script>
+        function sync_all_callback(data) {
+		window.nextAttachment = null;
+		if (typeof(data.next) !== 'undefined') {
+			window.nextAttachment = data.next;
+			jQuery('button[data-action="sync_all"]').first().click();
+		}
+        }
+	function sync_all_filter(data) {
+		if (typeof(window.nextAttachment) !== 'undefined' && window.nextAttachment !== null) {
+			data.next = window.nextAttachment;
+		}
+		return data;
+	}
+    </script>
+    <?php
+});

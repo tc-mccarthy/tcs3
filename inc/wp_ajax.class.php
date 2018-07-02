@@ -28,35 +28,41 @@ class tcs3_ajax
     {
         global $tcS3;
 
+        $next = 0;
+        if (isset($_POST['next'])) {
+            $next = (int) $_POST['next'];
+        }
+
         $attachments = $tcS3->wp_media_->get_all_uploads();
         $response = ["success" => [], "error" => [], "message" => "Done!"];
 
+        $post_id = $attachments[$next];
 
-        foreach ($attachments as $post_id) {
-            $upload = $tcS3->wp_media_->upload_handler($post_id);
-            $file_data = wp_get_attachment_metadata($post_id);
-            $file = get_attached_file($post_id);
-            $path = $this->get_path_from_file($file);
+        $upload = $tcS3->wp_media_->upload_handler($post_id);
+        $file_data = wp_get_attachment_metadata($post_id);
+        $file = get_attached_file($post_id);
+        $path = $tcS3->wp_media_->get_path_from_file($file);
+        $success = $upload;
 
-            $success = $upload;
-
-            if (isset($file_data["sizes"])) {
-                foreach ($file_data["sizes"] as $size => $details) {
-                    $file = $path . "/" . $details["file"];
-                    $key = $tcS3->aws_ops_->build_attachment_key($file);
-                    $upload = $tcS3->aws_ops_->s3_upload($file, $key);
-
-                    if (!$upload) {
-                        $success = false;
-                    }
+        if (isset($file_data["sizes"])) {
+            foreach ($file_data["sizes"] as $size => $details) {
+                $file = $tcS3->base_->options['local_path'] . "/" . $path . "/" . $details["file"];
+                $key = $tcS3->aws_ops_->build_attachment_key($file);
+                $upload = $tcS3->aws_ops_->s3_upload($file, $key);
+                if (!$upload) {
+                    $success = false;
                 }
             }
+        }
 
-            if ($success) {
-                $response["success"][] = $post_id;
-            } else {
-                $response["error"][] = $post_id;
-            }
+        if ($success) {
+            $response["success"][] = $post_id;
+        } else {
+            $response["error"][] = $post_id;
+        }
+
+        if (isset($attachments[++$next])) {
+            $response["next"] = $next;
         }
 
         wp_send_json_success($response);
