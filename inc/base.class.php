@@ -48,7 +48,7 @@ class tcs3_base
             $network_options = $this->unserialize(get_site_option("tcS3_options"));
         }
 
-        if (is_array($network_options)) {
+        if (!empty($network_options)) {
             $options = array_merge($options, $network_options);
         }
 

@@ -16,7 +16,9 @@
  {
      public function __construct()
      {
-         add_action("after_setup_theme", [$this, "init"], 20);
+         if (php_sapi_name() !== "cli") {
+            add_action("after_setup_theme", [$this, "init"], 20);
+         }
          add_action("admin_enqueue_scripts", [$this, "scripts"], 20);
      }
 
